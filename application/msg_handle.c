@@ -6,7 +6,7 @@
 INT32 test_func(char * str, int len);
 
 typedef INT32 (*msg_func)(INT8 **keylist,INT32 len,INT32 data1,INT32 data2,
-                      void* data3,
+                      INT8* data3,
                       INT32 operation,
                       INT8 valstr,
                       INT8 *resp_buf);
@@ -19,7 +19,7 @@ struct {
     {":FREQ:CW", freq_handle},
     {":FREQ:RF:STAR", freq_handle},
     {":FREQ:RF:STOP", freq_handle},
-    {":FREQ:RF:SCALe", freq_handle},
+    {":FREQ:RF:SCAL", freq_handle},
 };
 
 #define RESP_DEFAULT_LEN (0x200)
@@ -27,12 +27,6 @@ struct {
 INT32 test_func(char * str, int len)
 {
     printf("received buf is:  \n\t%s\n\n\t len is %d\n",str,len);
-    return 0;
-}
-
-INT32 msg_head_prase(char * src, char * head, int len)
-{
-    
     return 0;
 }
 
@@ -49,11 +43,11 @@ msg_func get_func_by_msg_head(char * msg_head)
     return NULL;
 }
 
-INT32 cmd_handle(INT8 **keylist,
+INT32 get_cmd_func_and_run(INT8 **keylist,
                       INT32 len,
                       INT32 data1,
                       INT32 data2,
-                      void* data3,
+                      INT8* data3,
                       INT32 operation,
                       INT8 valstr,
                       INT8 *resp_buf)
@@ -69,7 +63,7 @@ INT32 cmd_handle(INT8 **keylist,
 
     if(!func)
     {
-        printf("cmd_handle, no match function found!, " \
+        printf("get_cmd_func_and_run, no match function found!, " \
             "the keylist is %s \n",\
                 tmplist);
         return -1;
@@ -78,38 +72,28 @@ INT32 cmd_handle(INT8 **keylist,
     return func(keylist, len,data1,data2,data3,operation,valstr,resp_buf);
 }
 
-VOID rx_msg_handle(QUE_BLK * blk, VOID * para)
+INT32 cmd_handle(INT8 * cmd)
 {
-    char * msg;
     int ret;
-
     INT8 keylist[8][MAX_KEY_STR_LEN];
     INT32 len;
     INT32 data1;
     INT32 data2;
-    void* data3;
+    INT8 data3[BACK_UP_BUF_LEN];
     INT8 valstr[128];
     INT32 operation;
     INT8 * resp_buf;
 
-    if((!blk) || (blk->buf))
-    {
-        printf("rx_msg_handle NULL buffer received!\n");
-        return;
-    }
-
-    msg = (char *)blk->buf;
-    memset(buff, 0, 256);
     memset(keylist, 0, sizeof(keylist));
     memset(valstr, 0, 128);
 
-    ret = commd_str_prase(msg,keylist,&len,&data1,&data2, \
-                    &data3,&operation,&valstr);
+    ret = commd_str_prase(cmd,keylist,&len,&data1,&data2, \
+                    data3,&operation,&valstr);
 
     if(ret < 0)
     {
         printf("rx_msg_handle, prase msg failed!\n");
-        return;
+        return -1;
     }
 
     ret = PT_OPT.mem_alloc(RESP_DEFAULT_LEN, &resp_buf, 0);
@@ -118,7 +102,7 @@ VOID rx_msg_handle(QUE_BLK * blk, VOID * para)
         memset(resp_buf,0,RESP_DEFAULT_LEN);
 
     /* if resp_buf is NULL, the cmd_handle will ignore it*/
-    ret = cmd_handle(keylist,len,data1,data2,data3,operation,resp_buf);
+    ret = get_cmd_func_and_run(keylist,len,data1,data2,data3,operation,resp_buf);
 
     if(ret < 0)
     {
@@ -137,6 +121,40 @@ VOID rx_msg_handle(QUE_BLK * blk, VOID * para)
             PT_OPT.mem_free(resp_buf);
         }
     }
+
+    return 0;
 }
 
+VOID rx_msg_handle(QUE_BLK * blk, VOID * para)
+{
+    char * msg;
+    int ret;
+
+    if((!blk) || (blk->buf))
+    {
+        printf("rx_msg_handle NULL buffer received!\n");
+        return;
+    }
+
+    msg = (char *)blk->buf;
+    ret = cmd_handle(msg);
+
+    if(ret < 0)
+    {
+        printf("rx_msg_handle, handle msg failed!\n");
+        return;
+    }
+}
+
+INT32 get_value(INT8 **keylist, INT32 len, INT8* resp_buf)
+{
+    INT32 ret;
+
+    ret = get_target_kv_node(keylist, len, NULL, NULL, NULL, resp_buf);
+
+    if(ret < 0)
+        return -1;
+
+    return 0;
+}
 

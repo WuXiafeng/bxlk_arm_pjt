@@ -2,6 +2,9 @@
 #include "types.h"
 #include "pf.h"
 
+#define MAX_KEY_STR_LEN   (16)
+#define MAX_VALUE_STR_LEN  (128)
+
 /*pare 4 values at most*/
 #define VAL_LIST_LEN (4)
 #define STR_VALUE (0x0eaffeed)
@@ -17,6 +20,8 @@ typedef INT32 (*STRFUNCPTR)(INT32 c);
 typedef struct val_list{
     char * value_list[VAL_LIST_LEN];
 }VAL_LIST;
+
+#define BACK_UP_BUF_LEN (sizeof(VAL_LIST) + MAX_VALUE_STR_LEN)
 
 INT8* strtrim(INT8 *s, STRFUNCPTR pfunc)
 {
@@ -54,7 +59,7 @@ INT32 convet_str_2_value(INT8 * str)
 }
 
 INT32 value_str_prase(INT8 *valstr,INT32 *data1,
-                           INT32 *data2, void* *data3, INT32 *operation)
+                           INT32 *data2, INT8 *data3, INT32 *operation)
 {
     char * tmp_save;
     char * ret_str;
@@ -62,13 +67,8 @@ INT32 value_str_prase(INT8 *valstr,INT32 *data1,
     VAL_LIST * list_ptr;
     INT32 ret;
     char * tmptr;
+    list_ptr = (VAL_LIST *)data3;
 
-    ret = PT_OPT.mem_alloc(ROUND((sizeof(VAL_LIST) + 1 + strlen(valstr)),32), \
-                    (VOID **)&list_ptr, 0);
-
-    if(ret < 0)
-        return -1;
-    
     memset(list_ptr, 0, sizeof(VAL_LIST) + 1 + strlen(valstr));
     tmptr = (INT8 *)list_ptr + sizeof(VAL_LIST) + 1;
 
@@ -104,7 +104,6 @@ INT32 value_str_prase(INT8 *valstr,INT32 *data1,
     *operation = OPT_SET_VALUE;
     *data1 = convet_str_2_value(list_ptr->value_list[0]);
     *data2 = convet_str_2_value(list_ptr->value_list[1]);
-    *data3 = list_ptr;
 }
 
 /* NOTICE: data3 will point to a new alloc heap memory  */
@@ -114,7 +113,7 @@ INT32 commd_str_prase(INT8 *buf,
                               INT32 *len,
                               INT32 *data1,
                               INT32 *data2,
-                              void* *data3,
+                              INT8* data3,
                               INT32 *operation,
                               INT8 *valstr)
 {

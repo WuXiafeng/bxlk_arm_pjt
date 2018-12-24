@@ -3,10 +3,6 @@
 #include "pf.h"
 #include "array.h"
 
-#define SYS_COF_MAX_SUB_NODE (20)
-#define MAX_KEY_STR_LEN   (16)
-#define MAX_VALUE_STR_LEN  (32)
-
 typedef enum rf_scal{
     LOG = 0x1000,
     LIN
@@ -24,14 +20,9 @@ typedef struct key_value{
     INT8 value[MAX_VALUE_STR_LEN];
     INT32 data1;
     INT32 data2;
-    void* data3;
+    INT8 * data3;
     INT32 son_num;
 }K_V;
-
-typedef struct sys_config_node{
-    SYS_CONF_NODE * parent;
-    K_V sub_node[SYS_COF_MAX_SUB_NODE];
-}SYS_CONF_NODE;
 
 K_V cfg_root_node;
 INT32 cfg_mute_lock = -1;
@@ -77,7 +68,7 @@ INT32 cfg_init_load_file(void)
     INT32 len;
     INT32 data1;
     INT32 data2;
-    void* data3;
+    INT8 data3[BACK_UP_BUF_LEN];
     INT8 valstr[128];
     INT32 operation;
 
@@ -87,7 +78,7 @@ INT32 cfg_init_load_file(void)
     while (fgets(buff, 256, fp) != NULL)
     {
         ret = commd_str_prase(buff,keylist,&len,&data1,&data2, \
-                        &data3,&operation,&valstr);
+                        data3,&operation,&valstr);
         if(ret < 0){
             memset(buff, 0, 256);
             memset(keylist, 0, sizeof(keylist));
@@ -97,7 +88,7 @@ INT32 cfg_init_load_file(void)
 
         /* Check the paramter validation in this function*/
         /*May be the value is invalid, then we set the default value*/
-        ret = cmd_handle(keylist,&len,&data1,&data2,&data3,&operation,NULL);
+        ret = get_cmd_func_and_run(keylist,len,data1,data2,data3,operation,NULL);
         if(ret < 0)
         {
             printf("Warning, cfg_init_load_file handle init cmd failed!\n");
@@ -266,7 +257,7 @@ void free_target_kv_node(const INT8 ** keylist, INT32 len)
 }
 
 INT32 update_target_kv_node(const INT8 ** keylist, INT32 len, 
-                                       INT32 data1, INT32 data2, void* data3,
+                                       INT32 data1, INT32 data2, INT8* data3,
                                        INT8 * val_str)
 {
     K_V * kvobj;
@@ -281,24 +272,40 @@ INT32 update_target_kv_node(const INT8 ** keylist, INT32 len,
     PT_OPT.mute_lock(cfg_mute_lock);
     kvobj->data1 = data1;
     kvobj->data2 = data2;
-    if(data3 != NULL)
-    {
-        if(kvobj->data3)
-            PT_OPT.free(kvobj->data3);
-        kvobj->data3 = data3;
-    }
+    
     if(val_str){
         memset(kvobj->value,0,MAX_VALUE_STR_LEN);
         strncpy(kvobj->value,val_str, \
             (strlen(val_str) > MAX_VALUE_STR_LEN ? \
                     MAX_VALUE_STR_LEN : strlen(val_str)));
     }
+    
+    if(data3 != NULL)
+    {
+        if(kvobj->data3)
+        {
+            memset(kvobj->data3,0,BACK_UP_BUF_LEN);
+        }
+        else
+        {
+            PT_OPT.mem_alloc(BACK_UP_BUF_LEN, &kvobj->data3, 0);
+            if(!kvobj->data3)
+            {
+                printf("Warning, update_target_kv_node allc mem failed!\n");
+                PT_OPT.mute_unlock(cfg_mute_lock);
+                return -1;
+            }
+        }
+
+        memcpy(kvobj->data3,data3,BACK_UP_BUF_LEN);
+    }
+    
     PT_OPT.mute_unlock(cfg_mute_lock);
     return 0;
 }
 
 INT32 add_target_kv_node(const INT8 ** keylist, INT32 len, 
-                                       INT32 data1, INT32 data2, void* data3,
+                                       INT32 data1, INT32 data2, INT8* data3,
                                        INT8 * val_str)
 {
     K_V * kvobj;
@@ -313,19 +320,34 @@ INT32 add_target_kv_node(const INT8 ** keylist, INT32 len,
     PT_OPT.mute_lock(cfg_mute_lock);
     kvobj->data1 = data1;
     kvobj->data2 = data2;
-    kvobj->data3 = data3;
+
     if(val_str){
         memset(kvobj->value,0,MAX_VALUE_STR_LEN);
         strncpy(kvobj->value,val_str, \
             (strlen(val_str) > MAX_VALUE_STR_LEN ? \
                     MAX_VALUE_STR_LEN : strlen(val_str)));    
     }
+
+    if(data3 != NULL)
+    {
+
+        PT_OPT.mem_alloc(BACK_UP_BUF_LEN, &kvobj->data3, 0);
+        if(!kvobj->data3)
+        {
+            printf("Warning, add_target_kv_node allc mem failed!\n");
+            PT_OPT.mute_unlock(cfg_mute_lock);
+            return -1;
+        }
+    
+        memcpy(kvobj->data3,data3,BACK_UP_BUF_LEN);
+    }
+
     PT_OPT.mute_unlock(cfg_mute_lock);
     return 0;
 }
 
 INT32 get_target_kv_node(const INT8 ** keylist, INT32 len, 
-                                       INT32 *data1, INT32 *data2, void* *data3,
+                                       INT32 *data1, INT32 *data2, INT8* data3,
                                        INT8 * val_str)
 {
     K_V * kvobj;
@@ -338,9 +360,15 @@ INT32 get_target_kv_node(const INT8 ** keylist, INT32 len,
     }
 
     PT_OPT.mute_lock(cfg_mute_lock);
-    *data1 = kvobj->data1;
-    *data2 = kvobj->data2;
-    *data3 = kvobj->data3;
+    if(data1)
+        *data1 = kvobj->data1;
+
+    if(data2)
+        *data2 = kvobj->data2;
+
+    if(data3)
+        memcpy(data3, kvobj->data3, BACK_UP_BUF_LEN);
+
     if(val_str)
         strcpy(val_str,kvobj->value);
     PT_OPT.mute_unlock(cfg_mute_lock);
@@ -348,7 +376,7 @@ INT32 get_target_kv_node(const INT8 ** keylist, INT32 len,
 }                                       
 
 typedef void (*walk)(INT8 ** keylist,INT32 len,INT32 data1, 
-                      INT32 data2,void* data3, INT8 *valstr, void * para);
+                      INT32 data2,INT8* data3, INT8 *valstr, void * para);
 
 INT32 cfg_walk_leaf_node(K_V * node, walk func , 
                                     INT8 ** keylist, INT32 deep, void* para)
@@ -388,7 +416,7 @@ INT32 cfg_walk_all_leaf_node(walk func, void * para)
 
 void assemble_cfg_and_write(INT8 ** keylist, INT32 len,
                         INT32 data1, INT32 data2, 
-                        void* data3, INT8 *valstr, void * para)
+                        INT8* data3, INT8 *valstr, void * para)
 {
     INT8 tmpstr[128];
     FILE * fp = (FILE *)para;
