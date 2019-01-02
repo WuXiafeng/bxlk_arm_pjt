@@ -1,27 +1,6 @@
 /*str_prase.c*/
-#include "types.h"
+#include "str_prase.h"
 #include "pf.h"
-
-#define MAX_KEY_STR_LEN   (16)
-#define MAX_VALUE_STR_LEN  (128)
-
-/*pare 4 values at most*/
-#define VAL_LIST_LEN (4)
-#define STR_VALUE (0x0eaffeed)
-
-typedef enum cmd_opra{
-    OPT_GET_VALUE = 0x3923,
-    OPT_CHECK_KEY_LIST,
-    OPT_SET_VALUE
-}CMD_OPRA;
-
-typedef INT32 (*STRFUNCPTR)(INT32 c);
-
-typedef struct val_list{
-    char * value_list[VAL_LIST_LEN];
-}VAL_LIST;
-
-#define BACK_UP_BUF_LEN (sizeof(VAL_LIST) + MAX_VALUE_STR_LEN)
 
 INT8* strtrim(INT8 *s, STRFUNCPTR pfunc)
 {
@@ -46,19 +25,22 @@ INT8 * get_upper(INT8 * str)
 }
 
 /* Convert only digital string */
-INT32 convet_str_2_value(INT8 * str)
+INT32 convet_str_2_value(INT8 * str, double * db)
 {
     if(!str)
         return -1;
 
-    if(isdigit(*str))
-        return strtoul(str, NULL, 0);
-
+    if((isdigit(*str)) || (*str == '-'))
+    {
+        if(db)
+            *db = atof(str);
+        return DIGI_VALUE;
+    }
     /* If it's string, just indicate that  */
     return STR_VALUE;
 }
 
-INT32 value_str_prase(INT8 *valstr,INT32 *data1,
+INT32 value_str_prase(INT8 *valstr,double *data1,
                            INT32 *data2, INT8 *data3, INT32 *operation)
 {
     char * tmp_save;
@@ -102,8 +84,10 @@ INT32 value_str_prase(INT8 *valstr,INT32 *data1,
     }
 
     *operation = OPT_SET_VALUE;
-    *data1 = convet_str_2_value(list_ptr->value_list[0]);
-    *data2 = convet_str_2_value(list_ptr->value_list[1]);
+    convet_str_2_value(list_ptr->value_list[0], data1);
+    *data2 = convet_str_2_value(list_ptr->value_list[1], NULL);
+
+    return OK;
 }
 
 /* NOTICE: data3 will point to a new alloc heap memory  */
@@ -111,7 +95,7 @@ INT32 value_str_prase(INT8 *valstr,INT32 *data1,
 INT32 commd_str_prase(INT8 *buf,
                               INT8 **keylist,
                               INT32 *len,
-                              INT32 *data1,
+                              double *data1,
                               INT32 *data2,
                               INT8* data3,
                               INT32 *operation,

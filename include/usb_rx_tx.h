@@ -7,6 +7,8 @@
 VOID usb_rx_handle(VOID);
 VOID usb_tx_done(VOID);
 VOID start_usb_tx(QUE_BLK * blk, VOID * para);
+VOID set_power_on_flag(VOID);
+
 
 #endif /*__USB_RX_TX_H__*/
 

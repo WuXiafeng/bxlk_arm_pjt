@@ -8,6 +8,7 @@
 #include "queuehandle.h"
 
 VOID rx_msg_handle(QUE_BLK * blk, VOID * para);
+INT32 get_value(INT8 **keylist, INT32 len, INT8* resp_buf);
 
 #endif /* __MSG_HANDLE_H__ */
 

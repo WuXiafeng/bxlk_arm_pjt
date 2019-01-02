@@ -1,36 +1,25 @@
 /* config_file_manage.c */
-#include "types.h"
+#include "config_file_manage.h"
 #include "pf.h"
 #include "array.h"
-
-typedef enum rf_scal{
-    LOG = 0x1000,
-    LIN
-}FSCAL;
-
-SLIST_HEAD(kv_head, key_value);
-
-/* key value obj */
-typedef struct key_value{
-    SLIST_ENTRY(key_value) next_brother;
-    struct kv_head son_head;
-    key_value * parent;
-    INT32 state;
-    INT8 key[MAX_KEY_STR_LEN];
-    INT8 value[MAX_VALUE_STR_LEN];
-    INT32 data1;
-    INT32 data2;
-    INT8 * data3;
-    INT32 son_num;
-}K_V;
+#include "str_prase.h"
 
 K_V cfg_root_node;
 INT32 cfg_mute_lock = -1;
+extern const INT8 * default_cfg_table[];
 
 INT32 cfg_init_load_file(void)
 {
     FILE *fp;
     INT8 buff[256];
+    INT8 keylist[8][MAX_KEY_STR_LEN];
+    INT32 len;
+    double data1;
+    INT32 data2;
+    INT8 data3[BACK_UP_BUF_LEN];
+    INT8 valstr[128];
+    INT32 operation;
+    
     memset(&cfg_root_node, 0, sizeof(K_V));
     strcpy(cfg_root_node.key, "root");
     SLIST_INIT(cfg_root_node.son_head);
@@ -44,13 +33,13 @@ INT32 cfg_init_load_file(void)
         return -1;
     }
 
-    if((access("/mnt/flash/bxlk.confg",0)) != -1)
+    if((access(CFG_FILE_PATH,0)) != -1)
     {
-        fp = fopen("/mnt/flash/bxlk.confg", "r");
+        fp = fopen(CFG_FILE_PATH, "r");
     }
-    else if((access("/mnt/flash/bxlk.confg.bak",0)) != -1)
+    else if((access(BK_CFG_FIEL_PATH,0)) != -1)
     {
-        fp = fopen("/mnt/flash/bxlk.confg.bak", "r");
+        fp = fopen(BK_CFG_FIEL_PATH, "r");
     }
     else
     {
@@ -64,51 +53,25 @@ INT32 cfg_init_load_file(void)
         return 0;
     }
 
-    INT8 keylist[8][MAX_KEY_STR_LEN];
-    INT32 len;
-    INT32 data1;
-    INT32 data2;
-    INT8 data3[BACK_UP_BUF_LEN];
-    INT8 valstr[128];
-    INT32 operation;
-
-    memset(buff, 0, 256);
-    memset(keylist, 0, sizeof(keylist));
-    memset(valstr, 0, 128);
     while (fgets(buff, 256, fp) != NULL)
     {
+        memset(buff, 0, 256);
+        memset(keylist, 0, sizeof(keylist));
+        memset(valstr, 0, 128);        
         ret = commd_str_prase(buff,keylist,&len,&data1,&data2, \
                         data3,&operation,&valstr);
         if(ret < 0){
-            memset(buff, 0, 256);
-            memset(keylist, 0, sizeof(keylist));
-            memset(valstr, 0, 128);
             continue;
         }
 
         /* Check the paramter validation in this function*/
-        /*May be the value is invalid, then we set the default value*/
+        /*May be the value is invalid, then we just return*/
         ret = get_cmd_func_and_run(keylist,len,data1,data2,data3,operation,NULL);
         if(ret < 0)
         {
             printf("Warning, cfg_init_load_file handle init cmd failed!\n");
-            fclose(fp);
-
             continue;
-        }  
-
-        ret = add_target_kv_node(keylist,len,data1,data2,data3,valstr);
-        
-        if(ret < 0)
-        {
-            printf("ERROR, cfg_init_load_file prase cfg file failed!\n");
-            fclose(fp);
-            return -1;
-        }
-
-        memset(buff, 0, 256);
-        memset(keylist, 0, sizeof(keylist));
-        memset(valstr, 0, 128);        
+        }       
     }
 
     fclose(fp);
@@ -257,7 +220,7 @@ void free_target_kv_node(const INT8 ** keylist, INT32 len)
 }
 
 INT32 update_target_kv_node(const INT8 ** keylist, INT32 len, 
-                                       INT32 data1, INT32 data2, INT8* data3,
+                                       double data1, INT32 data2, INT8* data3,
                                        INT8 * val_str)
 {
     K_V * kvobj;
@@ -305,7 +268,7 @@ INT32 update_target_kv_node(const INT8 ** keylist, INT32 len,
 }
 
 INT32 add_target_kv_node(const INT8 ** keylist, INT32 len, 
-                                       INT32 data1, INT32 data2, INT8* data3,
+                                       double data1, INT32 data2, INT8* data3,
                                        INT8 * val_str)
 {
     K_V * kvobj;
@@ -347,7 +310,7 @@ INT32 add_target_kv_node(const INT8 ** keylist, INT32 len,
 }
 
 INT32 get_target_kv_node(const INT8 ** keylist, INT32 len, 
-                                       INT32 *data1, INT32 *data2, INT8* data3,
+                                       double *data1, INT32 *data2, INT8* data3,
                                        INT8 * val_str)
 {
     K_V * kvobj;
@@ -375,7 +338,7 @@ INT32 get_target_kv_node(const INT8 ** keylist, INT32 len,
     return 0;
 }                                       
 
-typedef void (*walk)(INT8 ** keylist,INT32 len,INT32 data1, 
+typedef void (*walk)(INT8 ** keylist,INT32 len,double data1, 
                       INT32 data2,INT8* data3, INT8 *valstr, void * para);
 
 INT32 cfg_walk_leaf_node(K_V * node, walk func , 
@@ -415,7 +378,7 @@ INT32 cfg_walk_all_leaf_node(walk func, void * para)
 }
 
 void assemble_cfg_and_write(INT8 ** keylist, INT32 len,
-                        INT32 data1, INT32 data2, 
+                        double data1, INT32 data2, 
                         INT8* data3, INT8 *valstr, void * para)
 {
     INT8 tmpstr[128];
@@ -441,12 +404,12 @@ INT32 sync_to_cfg_file(void)
     /*Create bak file*/
     PT_OPT.mute_lock(cfg_mute_lock);
     
-    if ((access("/mnt/flash/bxlk.confg",0)) != -1)
+    if ((access(CFG_FILE_PATH,0)) != -1)
     {
-        system("mv -f /mnt/flash/bxlk.confg /mnt/flash/bxlk.config.bak");
+        system("mv -f "CFG_FILE_PATH" "BK_CFG_FIEL_PATH);
     }
     
-    fp = fopen("/mnt/flash/bxlk.confg", "a+");
+    fp = fopen(CFG_FILE_PATH, "a+");
 
     if(fp != 0)
     {
@@ -460,5 +423,46 @@ INT32 sync_to_cfg_file(void)
     fclose(fp);
     PT_OPT.mute_unlock(cfg_mute_lock);
     return 0;
+}
+
+VOID check_and_set_the_default_value(VOID)
+{
+    INT32 i;
+    const INT8* cmd;
+    INT32 ret;
+    K_V * kv;
+
+    INT8 keylist[8][MAX_KEY_STR_LEN];
+    INT32 len;
+    double data1;
+    INT32 data2;
+    INT8 data3[BACK_UP_BUF_LEN];
+    INT8 valstr[128];
+    INT32 operation;
+
+    for(i=0;i<NUM_ELEMENTS(default_cfg_table);i++)
+    {
+        cmd = default_cfg_table[i];
+        memset(buff, 0, 256);
+        memset(keylist, 0, sizeof(keylist));
+        memset(valstr, 0, 128);
+
+        ret = commd_str_prase(cmd,keylist,&len,&data1,&data2, \
+                        data3,&operation,&valstr);
+        if(ret < 0){
+            continue;
+        }
+
+        kv = find_target_kv_node(keylist,len);
+
+        /*kv node alread exist*/
+        if(kv)
+        {
+            continue;
+        }
+
+        /* add the default value */
+        add_target_kv_node(keylist,len,data1,data2,data3,valstr);
+    }
 }
 

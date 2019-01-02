@@ -2,6 +2,7 @@
 /*Add by Wuxiafeng 20181202 first version */
 
 #include "comm.h"
+#include "usb_rx_tx.h"
 
 #define SYSTEM_ON   0x5A5A5A5Aul
 #define SYSTEM_OFF  0xA5A5A5A5ul
@@ -14,6 +15,9 @@ extern INT32 comm_isr_init(VOID);
 VOID set_system_on(void){
 	if(system_state_flag != SYSTEM_ON)
 		system_state_flag = SYSTEM_ON;
+
+    /*set power on flag */
+    set_power_on_flag();
 	return;
 }
 

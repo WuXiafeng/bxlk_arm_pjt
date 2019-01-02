@@ -22,6 +22,12 @@
 /* Enable default work thread for async works */
 #define WORK_THREAD
 
+/* Config file path*/
+#define CFG_FILE_PATH "/mnt/flash/bxlk.confg"
+
+/* Backup config file path */
+#define BK_CFG_FIEL_PATH "/mnt/flash/bxlk.confg.bak"
+
 #endif /* __GLB_DEF_H__ */
 
 

@@ -2,10 +2,11 @@
 /* 20181203 first version */
 
 #include "msg_handle.h"
+#include "str_prase.h"
 
 INT32 test_func(char * str, int len);
 
-typedef INT32 (*msg_func)(INT8 **keylist,INT32 len,INT32 data1,INT32 data2,
+typedef INT32 (*msg_func)(INT8 **keylist,INT32 len,double data1,INT32 data2,
                       INT8* data3,
                       INT32 operation,
                       INT8 valstr,
@@ -20,6 +21,27 @@ struct {
     {":FREQ:RF:STAR", freq_handle},
     {":FREQ:RF:STOP", freq_handle},
     {":FREQ:RF:SCAL", freq_handle},
+    {":AMPL:CW", ampl_handle},
+    {":AMPL:STAR", ampl_handle},
+    {":AMPL:STOP", ampl_handle},
+    {":TRIG:IMM", trig_handle},
+    {":SWE:RF:STAT", swe_handle},
+    {":SWE:AMPL:STAT", swe_handle},
+    {":SWE:STEP:POIN", swe_handle},
+    {":SWE:STEP:DWEL", swe_handle},
+    {":SWE:REP", swe_handle},
+    {":SWE:STRG", swe_handle},
+    {":SWE:STRG:SLOP", swe_handle},
+    {":SWE:DIR", swe_handle},
+    {":PULM:STAT", pulm_handle},
+    {":PULM:SOUR", pulm_handle},
+    {":PULM:PER", pulm_handle},
+    {":PULM:WIDT", pulm_handle},
+    {":SYST:ERRor", sys_handle},
+    {":SYST:DATE", sys_handle},
+    {":SYST:TIME", sys_handle},
+    {":SYST:REF:FREQ", sys_handle},
+    {":RFO:STAT", rfo_handle},        
 };
 
 #define RESP_DEFAULT_LEN (0x200)
@@ -45,7 +67,7 @@ msg_func get_func_by_msg_head(char * msg_head)
 
 INT32 get_cmd_func_and_run(INT8 **keylist,
                       INT32 len,
-                      INT32 data1,
+                      double data1,
                       INT32 data2,
                       INT8* data3,
                       INT32 operation,
@@ -77,7 +99,7 @@ INT32 cmd_handle(INT8 * cmd)
     int ret;
     INT8 keylist[8][MAX_KEY_STR_LEN];
     INT32 len;
-    INT32 data1;
+    double data1;
     INT32 data2;
     INT8 data3[BACK_UP_BUF_LEN];
     INT8 valstr[128];
@@ -92,7 +114,7 @@ INT32 cmd_handle(INT8 * cmd)
 
     if(ret < 0)
     {
-        printf("rx_msg_handle, prase msg failed!\n");
+        printf("cmd_handle, prase msg failed!\n");
         return -1;
     }
 
@@ -106,7 +128,7 @@ INT32 cmd_handle(INT8 * cmd)
 
     if(ret < 0)
     {
-        printf("rx_msg_handle, handle msg failed!\n");
+        printf("cmd_handle, handle msg failed!\n");
     }
 
     /* if there's any string to send back, send it out, if no string ,just free the memory */

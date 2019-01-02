@@ -7,17 +7,29 @@
 #include "usb_rx_tx.h"
 #include "pf.h"
 
-#define BRAM_TX_DATA_OFFSET 0x20
-#define BRAM_TX_LEN_OFFSET 0x800
-#define BRAM_TX_FLAG_OFFSET 0x810
-#define BRAM_MSG_MAX_LEN  0x7e0
+#define BOOT_STATUS 0x0UL
+#define PWR_OK_BIT_MASK 0x00000001UL
+#define WORK_STATUS 0x1ul
+#define RFNC_BIT_MASK 0x00000001UL
+#define DRFC_BIT_MASK 0x00000002UL
 
-#define BRAM_RX_DATA_OFFSET 0x1020
-#define BRAM_RX_LEN_OFFSET 0x1800
-#define BRAM_RX_FLAG_OFFSET 0x1810
+#define CNT_CMD 0x0aUL
+#define CNT_DFC 0x0bUL
 
-#define BARM_TX_FLAG 0x5a5a5a5aul
-#define BRAM_RX_FLAG 0xa5a5a5a5ul
+#define CMD_Buffer 0x200UL
+#define DFC_Buffer 0x1000UL
+
+#define BRAM_TX_DATA_OFFSET DFC_Buffer
+#define BRAM_TX_LEN_OFFSET CNT_DFC
+#define BRAM_TX_FLAG_OFFSET WORK_STATUS
+#define BRAM_MSG_MAX_LEN  0xa00
+
+#define BRAM_RX_DATA_OFFSET CMD_Buffer
+#define BRAM_RX_LEN_OFFSET CNT_CMD
+#define BRAM_RX_FLAG_OFFSET WORK_STATUS
+
+#define BARM_TX_FLAG DRFC_BIT_MASK
+#define BRAM_RX_FLAG RFNC_BIT_MASK
 
 INT32 tx_rx_sema;
 
@@ -26,13 +38,29 @@ extern INT32 rx_work_thread_id;
 INT32 usb_tx_rx_init(void)
 {
     INT32 ret;
+    UINT32 tmp;
     /* sema  init value is zero */
     ret = PT_OPT.sema_init(&tx_rx_sema, 0);
 
     if(ret < 0)
         return ret;
+
+    tmp = RFNC_BIT_MASK;
+    ret = bram_write(WORK_STATUS,&tmp,4);
+
+    if(ret)
+        return ret;
     
     return 0;
+}
+
+VOID set_power_on_flag(VOID)
+{
+    UINT32 tmp;
+    tmp = PWR_OK_BIT_MASK;
+
+    bram_write(BOOT_STATUS,&tmp,4);
+    return;
 }
 
 VOID start_usb_tx(QUE_BLK * blk, VOID * para)
@@ -61,7 +89,9 @@ VOID start_usb_tx(QUE_BLK * blk, VOID * para)
     if(ret)
         return;
 
-    tmp = BARM_TX_FLAG;
+    /*set DRFC */
+    bram_read(BRAM_RX_FLAG_OFFSET,&tmp,4);
+    tmp |= DRFC_BIT_MASK;
     ret = bram_write(BRAM_TX_FLAG_OFFSET, (UINT8*)&tmp, 4);
     if(ret)
         return;
@@ -71,6 +101,7 @@ VOID start_usb_tx(QUE_BLK * blk, VOID * para)
 }
 
 /* This function is called in userplane ISR,  it's OK to do any operation */
+/* Make sure the ISR should not nest */
 VOID usb_rx_handle(VOID)
 {
     UINT8 * buf;
@@ -87,21 +118,27 @@ VOID usb_rx_handle(VOID)
 
     if(!buf)
     {
-        printf("usb_rx_handle: alloc memory failed!\n");
-        return;
+        printf("usb_rx_handle: alloc memory failed!\n");        
+        goto clear_reg;
     }
 
     ret = bram_read(BRAM_RX_DATA_OFFSET, buf, len);
     if(ret)
-        return;
+        goto clear_reg;
 
     add_work_to_thread(rx_work_thread_id, (VOID*)buf, len);
 
-    tmp = BRAM_RX_FLAG;
-    ret = bram_write(BRAM_RX_FLAG_OFFSET, (UINT8*)&tmp, 4);
+clear_reg:
+    /*clear CNT_CMD*/
+    tmp = 0;
+    bram_write(BRAM_RX_LEN_OFFSET,&tmp,4);
+    
+    /*reset RFNC */
+    bram_read(BRAM_RX_FLAG_OFFSET,&tmp,4);
+    tmp |= RFNC_BIT_MASK;
+    bram_write(BRAM_RX_FLAG_OFFSET,&tmp,4);
 
-    if(ret)
-        return;
+    return;
 }
 
 VOID usb_tx_done(VOID)

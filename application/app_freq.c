@@ -1,12 +1,8 @@
 /*app_freq.c*/
-#include "types.h"
-
-#define UNIT_GHZ (1000000)
-#define UNIT_MHZ (1000)
-#define UNIT_KHZ (1)
-
-#define MAX_FREQ (18000000)
-#define MIN_FREQ (100000)
+#include "app_freq.h"
+#include "msg_handle.h"
+#include "str_prase.h"
+#include "config_file_manage.h"
 
 INT32 freq_str_val_map(INT8 * str)
 {
@@ -26,7 +22,7 @@ INT32 freq_str_val_map(INT8 * str)
     return -1;
 }
 
-INT32 freq_data_check(INT8 **keylist, INT32 len, INT32 data1,INT8 * data3)
+INT32 freq_data_check(INT8 **keylist, INT32 len, double data1,INT8 * data3)
 {
     VAL_LIST * list_ptr;
     list_ptr = (VAL_LIST *)data3;
@@ -54,7 +50,7 @@ INT32 freq_data_check(INT8 **keylist, INT32 len, INT32 data1,INT8 * data3)
         
 }
 
-INT32 freq_handle(INT8 **keylist,INT32 len,INT32 data1,INT32 data2,
+INT32 freq_handle(INT8 **keylist,INT32 len,double data1,INT32 data2,
                       INT8 * data3,
                       INT32 operation,
                       INT8 valstr,
