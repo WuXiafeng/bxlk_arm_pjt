@@ -195,7 +195,11 @@
 	 int mute_idx;
 	 (VOID)option;
 	 mute_idx = find_array_free((UINT8 *)mute_arrary,  \
-							 MAX_MUTE_NUM, sizeof(MUTE_INFO));	  
+							 MAX_MUTE_NUM, sizeof(MUTE_INFO));
+     if(mute_idx < 0){
+        *idx = mute_idx;
+        return ERROR;
+     }
 	 while ((pthread_mutex_init(mute_arrary[mute_idx].m, &mxattr) != 0) &&
 		 (pthread_mutex_init(mute_arrary[mute_idx].m, NULL) != 0)) {
 		 usleep(10000);

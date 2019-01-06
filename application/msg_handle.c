@@ -3,6 +3,7 @@
 
 #include "msg_handle.h"
 #include "str_prase.h"
+#include "core.h"
 
 INT32 test_func(char * str, int len);
 
@@ -179,4 +180,20 @@ INT32 get_value(INT8 **keylist, INT32 len, INT8* resp_buf)
 
     return 0;
 }
+
+bool if_err_msg(INT8 * buf, INT32 len)
+{
+    if(!(strncmp(buf,"ERROR",5)))
+    {
+        return true;
+    }
+    return false;
+}
+
+INT32 app_init(void)
+{
+    regst_socket_msg_filter(if_err_msg);
+    return 0;
+}
+
 

@@ -28,6 +28,18 @@
 /* Backup config file path */
 #define BK_CFG_FIEL_PATH "/mnt/flash/bxlk.confg.bak"
 
+/* socket service IP */
+#define SOCKET_SER_IP_ADDR "192.168.13.188"
+
+/* socket port  */
+#define SOCKET_PORT   7788
+
+/*socket wellcome msg*/
+#define SOCKET_WELLCOME_MSG "wellcome bxlk controll center!"
+
+/* usb channel time out duration */
+#define USB_CHAN_TIMEOUT_DURA 3
+
 #endif /* __GLB_DEF_H__ */
 
 

@@ -108,6 +108,9 @@ VOID usb_rx_handle(VOID)
     int len;
     int ret;
     int tmp;
+
+    /*TODO: move this function to a better place*/
+    core_feed_usb();
     
     bram_read(BRAM_RX_LEN_OFFSET, (UINT8*)&len, 4);
 

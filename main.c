@@ -64,6 +64,20 @@ VOID main(const INT32 argc, const INT8 ** argv)
         exit(1);
     }    
 
+    ret = core_state_manager_init();
+    if(ret != OK)
+    {
+        printf("core_state_manager_init failed!\n");
+        exit(1);
+    } 
+
+    ret = app_init();
+    if(ret != OK)
+    {
+        printf("app_init failed!\n");
+        exit(1);
+    } 
+
 	set_system_on();
 	
     start_socket_session_control();
