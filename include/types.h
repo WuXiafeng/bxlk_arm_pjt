@@ -7,6 +7,11 @@
 extern "C" {
 #endif
 
+//Add gnu source, so that related MACROs are defined
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -37,6 +42,7 @@ extern "C" {
 #include <sys/mman.h>
 #include <linux/netlink.h>
 #include <ctype.h>
+#include <arpa/inet.h>
 
 #include "glb_conf.h"
 
@@ -126,7 +132,8 @@ typedef enum comm_err_type{
 	COMM_PLATFORM_NOT_INIT,
 	WORK_THREAD_MAX,
 	WORK_THREAD_INVALID_PARA,
-	COMM_SEMA_ERROR
+	COMM_SEMA_ERROR,
+	COMM_MEM_ALLOC_ERR
 }COMM_ERROR;
 
 typedef enum API_FUNCTION_ERROR{
@@ -139,7 +146,8 @@ typedef enum CORE_FUNCTION_ERROR{
 	CORE_LAYER_GET_PLATFORM_OBJ_ERROR,
 	CORE_LAYER_PLATFORM_INIT_ERROR,
 	CORE_LAYER_INIT_NODE_TABLE_ERROR,
-	CORE_LAYER_INIT_SOCKET_ERROR
+	CORE_LAYER_INIT_SOCKET_ERROR,
+	CORE_QUEUE_MAX_LEN
 }CORE_ERROR_TYPE;
 
 typedef enum ROUTE_FUNCTION_ERROR{
@@ -194,8 +202,18 @@ typedef enum PLATFORM_FUNCTION_ERROR{
     PLATFORM_LAYER_CV_NOT_EXIST,
     LLATFORM_LAYER_TIME_OUT,
     PLATFORM_LAYER_INVALIDE_MUTE_IDX,
-    PLATFORM_LAYER_MUTE_NOT_EXIST
+    PLATFORM_LAYER_MUTE_NOT_EXIST,
+    PLATFORM_LAYER_SEMA_FULL,
+    PLATFORM_LAYER_INVALID_PARA,
+    PLATFORM_LAYER_TCP_SOCK_NO_CONN,
+    PLATFORM_LAYER_SOCK_NO_DATA,
 }PLATFORM_ERROR_TYPE;
+
+typedef enum{
+    TRANSPORT_TYPE_TCP = 500,
+    TRANSPORT_TYPE_UDP,
+    NUM_TRANSPORT_TYPE
+}TRANSPORT_TYPE;
 
 typedef VOID (*isr_func)(VOID);
 

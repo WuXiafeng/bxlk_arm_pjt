@@ -23,7 +23,7 @@ INT32 work_thread_init(VOID)
     return create_comm_work_thread();
 }
 
-static VOID work_func_caller(VOID * para)
+static VOID* work_func_caller(VOID * para)
 {
     QUE_BLK * blk;
     WORK_INFO * ptr = (WORK_INFO *)para;
@@ -47,7 +47,7 @@ static VOID work_func_caller(VOID * para)
 
         PT_OPT.mem_free(blk);
     }
-
+    return NULL;
 }
 
 static UINT32 work_index = 0x18880000UL;
@@ -93,14 +93,14 @@ INT32 create_work_thread(INT32 que_idx,
     objptr->info.queue_idx = que_idx;
     objptr->info.func_para = para;
    
-    ret = PT_OPT.sema_init(&objptr->info.sema, 1);
+    objptr->info.sema = PT_OPT.sema_init(0);
 
-    if(ret < 0)
+    if(objptr->info.sema < 0)
     {
         PT_OPT.mute_lock(work_thread_comm_lock);
         memset(&work_array[idx],0,sizeof(WORK_OBJ_ARRAY));
         PT_OPT.mute_unlock(work_thread_comm_lock);
-        return ret;
+        return ERROR;
     }
 
     objptr->work_thread_num = 0;
@@ -197,7 +197,7 @@ static VOID comm_work_func(QUE_BLK * blk, VOID * para)
     (VOID)para;
     COMM_WORK_THREAD_OBJ * cb_info = (COMM_WORK_THREAD_OBJ *)blk->buf;
 
-    if(!cb_info)
+    if((!cb_info)&&(!cb_info->cb))
         return;
 
     cb_info->cb(NULL, cb_info->para);
@@ -251,7 +251,7 @@ INT32 create_comm_work_thread(VOID)
     comm_work_thread_idx = create_work_thread(ret, 
                                             comm_work_func,
                                             NULL,
-                                            3,
+                                            1,
                                             (INT8 *)"comm work");
 
     if(comm_work_thread_idx < 0)

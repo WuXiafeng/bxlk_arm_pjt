@@ -136,7 +136,7 @@ INT32 core_state_manager_init(VOID)
     return OK;
 }
 
-INT32 socket_fd = -1;
+INT32 core_socket_fd = -1;
 struct sockaddr_in sock_addr; 
 
 INT32 session_fd = -1;
@@ -253,12 +253,12 @@ void start_socket_session_control(void)
     if(ret < 0)
     {
         printf("mute init failed!\n");
-        return ERROR;        
+        return;        
     }
 
-    socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    core_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 
-    if(socket_fd < 0)
+    if(core_socket_fd < 0)
     {
         fprintf(stderr,"start_socket_session_control create Socket failed,"
             " exit! Error is %d.\n",errno);
@@ -268,9 +268,9 @@ void start_socket_session_control(void)
     memset(&sock_addr,0,sizeof(struct sockaddr_in));
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_port = htons(SOCKET_PORT);
-    sock_addr.sin_addr = inet_addr(SOCKET_SER_IP_ADDR);
+    sock_addr.sin_addr.s_addr = inet_addr(SOCKET_SER_IP_ADDR);
 
-    ret = bind(socket_fd,(struct sockaddr*)sock_addr,  \
+    ret = bind(core_socket_fd,(struct sockaddr*)&sock_addr,  \
                         sizeof(struct sockaddr_in));
 
     if(ret<0)
@@ -280,7 +280,7 @@ void start_socket_session_control(void)
         exit(1);  
     }
 
-    ret = listen(socket_fd,5);  
+    ret = listen(core_socket_fd,5);  
     if(ret<0)
     {  
         fprintf(stderr,"start_socket_session_control cannot listen,"
@@ -289,13 +289,16 @@ void start_socket_session_control(void)
     }  
 
 	/* todo: add socket session handler */
-    struct sockaddr_in client_addr;    
+    struct sockaddr_in client_addr;
+    socklen_t len;
+    
 	for(;;)
 	{
 		usleep(1000000);        
 WATI_SESSION:        
         memset(&client_addr,0,sizeof(struct sockaddr_in));
-        session_fd=accept(socket_fd,(struct sockaddr*)&client_addr,&len);
+        len = sizeof(client_addr);
+        session_fd=accept(core_socket_fd,(struct sockaddr*)&client_addr,&len);
 
         if(session_fd<0)
         {  
@@ -334,7 +337,7 @@ WATI_SESSION:
         }
 
         /*send wellcome*/
-        ret = data_send_timeout(session_fd,SOCKET_WELLCOME_MSG,\
+        ret = data_send_timeout(session_fd,(INT8*)SOCKET_WELLCOME_MSG,\
                               sizeof(SOCKET_WELLCOME_MSG),5); 
 
         if(ret < 0)
@@ -357,7 +360,7 @@ WATI_SESSION:
             }
             else if(ret > 0)
             {
-                len = strlen(recv_buf);
+                len = strlen((char *)recv_buf);
                 PT_OPT.mem_alloc(len, (VOID **)&buf, 0);
                 if(!buf)
                 {

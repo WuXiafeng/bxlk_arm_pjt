@@ -4,20 +4,28 @@
 #include "msg_handle.h"
 #include "str_prase.h"
 #include "core.h"
+#include "app_freq.h"
+#include "app_ampl.h"
+#include "app_trig.h"
+#include "app_swe.h"
+#include "app_pulm.h"
+#include "app_sys.h"
+#include "app_rfo.h"
+#include "config_file_manage.h"
 
 INT32 test_func(char * str, int len);
 
 typedef INT32 (*msg_func)(INT8 **keylist,INT32 len,double data1,INT32 data2,
                       INT8* data3,
                       INT32 operation,
-                      INT8 valstr,
+                      INT8* valstr,
                       INT8 *resp_buf);
 
 struct {
     char * head;
     msg_func  func;
 } head_func_map_table[] = {
-    {"testhead1", test_func},
+    {"testhead1", (msg_func)test_func},
     {":FREQ:CW", freq_handle},
     {":FREQ:RF:STAR", freq_handle},
     {":FREQ:RF:STOP", freq_handle},
@@ -53,13 +61,13 @@ INT32 test_func(char * str, int len)
     return 0;
 }
 
-msg_func get_func_by_msg_head(char * msg_head)
+msg_func get_func_by_msg_head(INT8 * msg_head)
 {
     int i;
 
     for(i=0;i<(int)NUM_ELEMENTS(head_func_map_table);i++)
     {
-        if(!strcmp(head_func_map_table[i].head,msg_head))
+        if(!strcmp((const char *)head_func_map_table[i].head,(const char *)msg_head))
             return head_func_map_table[i].func;
     }
 
@@ -72,7 +80,7 @@ INT32 get_cmd_func_and_run(INT8 **keylist,
                       INT32 data2,
                       INT8* data3,
                       INT32 operation,
-                      INT8 valstr,
+                      INT8* valstr,
                       INT8 *resp_buf)
 {
     msg_func  func;
@@ -97,8 +105,9 @@ INT32 get_cmd_func_and_run(INT8 **keylist,
 
 INT32 cmd_handle(INT8 * cmd)
 {
-    int ret;
-    INT8 keylist[8][MAX_KEY_STR_LEN];
+    int ret, i;
+    INT8 keylist_buf[8][MAX_KEY_STR_LEN];
+    INT8 * keylist[8];
     INT32 len;
     double data1;
     INT32 data2;
@@ -107,11 +116,16 @@ INT32 cmd_handle(INT8 * cmd)
     INT32 operation;
     INT8 * resp_buf;
 
-    memset(keylist, 0, sizeof(keylist));
+    for(i = 0; i < 8; i++)
+    {
+        keylist[i] = keylist_buf[i];
+    }
+
+    memset(keylist_buf, 0, sizeof(keylist_buf));
     memset(valstr, 0, 128);
 
     ret = commd_str_prase(cmd,keylist,&len,&data1,&data2, \
-                    data3,&operation,&valstr);
+                    data3,&operation,valstr);
 
     if(ret < 0)
     {
@@ -119,13 +133,13 @@ INT32 cmd_handle(INT8 * cmd)
         return -1;
     }
 
-    ret = PT_OPT.mem_alloc(RESP_DEFAULT_LEN, &resp_buf, 0);
+    ret = PT_OPT.mem_alloc(RESP_DEFAULT_LEN, (VOID **)&resp_buf, 0);
 
     if(resp_buf)
         memset(resp_buf,0,RESP_DEFAULT_LEN);
 
     /* if resp_buf is NULL, the cmd_handle will ignore it*/
-    ret = get_cmd_func_and_run(keylist,len,data1,data2,data3,operation,resp_buf);
+    ret = get_cmd_func_and_run(keylist,len,data1,data2,data3,operation,valstr,resp_buf);
 
     if(ret < 0)
     {
@@ -135,9 +149,9 @@ INT32 cmd_handle(INT8 * cmd)
     /* if there's any string to send back, send it out, if no string ,just free the memory */
     if(resp_buf)
     {
-        if(strlen(resp_buf))
+        if(strlen((char *)resp_buf))
         {
-            core_msg_send(resp_buf, strlen(resp_buf));
+            core_msg_send(resp_buf, strlen((char *)resp_buf));
         }
         else
         {
@@ -150,7 +164,8 @@ INT32 cmd_handle(INT8 * cmd)
 
 VOID rx_msg_handle(QUE_BLK * blk, VOID * para)
 {
-    char * msg;
+    (VOID)para;
+    INT8 * msg;
     int ret;
 
     if((!blk) || (blk->buf))
@@ -159,7 +174,7 @@ VOID rx_msg_handle(QUE_BLK * blk, VOID * para)
         return;
     }
 
-    msg = (char *)blk->buf;
+    msg = (INT8*)blk->buf;
     ret = cmd_handle(msg);
 
     if(ret < 0)
@@ -183,7 +198,10 @@ INT32 get_value(INT8 **keylist, INT32 len, INT8* resp_buf)
 
 bool if_err_msg(INT8 * buf, INT32 len)
 {
-    if(!(strncmp(buf,"ERROR",5)))
+    if(len < 5)
+        return false;
+        
+    if(!(strncmp((char*)buf,"ERROR",5)))
     {
         return true;
     }

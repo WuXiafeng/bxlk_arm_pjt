@@ -7,6 +7,8 @@
 #include "core.h"
 #include "comm.h"
 #include "bram.h"
+#include "config_file_manage.h"
+#include "msg_handle.h"
 
 VOID exit_bxlk(VOID)
 {
@@ -57,12 +59,7 @@ VOID main(const INT32 argc, const INT8 ** argv)
         exit(1);
     }
 
-    ret = check_and_set_the_default_value();
-    if(ret != OK)
-    {
-        printf("check_and_set_the_default_value failed!\n");
-        exit(1);
-    }    
+    check_and_set_the_default_value();
 
     ret = core_state_manager_init();
     if(ret != OK)

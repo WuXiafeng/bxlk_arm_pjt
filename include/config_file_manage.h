@@ -4,6 +4,9 @@
 #define __CONFIG_FILE_NAMANAGE_H__
 #include "types.h"
 #include "queue.h"
+#include "str_prase.h"
+
+struct key_value;
 
 SLIST_HEAD(kv_head, key_value);
 
@@ -11,7 +14,7 @@ SLIST_HEAD(kv_head, key_value);
 typedef struct key_value{
     SLIST_ENTRY(key_value) next_brother;
     struct kv_head son_head;
-    key_value * parent;
+    struct key_value * parent;
     INT32 state;
     INT8 key[MAX_KEY_STR_LEN];
     INT8 value[MAX_VALUE_STR_LEN];
@@ -22,15 +25,15 @@ typedef struct key_value{
 }K_V;
 
 INT32 cfg_init_load_file(void);
-K_V * create_and_get_target_kv_node(const INT8 ** keylist, INT32 len);
-K_V * find_target_kv_node(const INT8 ** keylist, INT32 len);
-INT32 update_target_kv_node(const INT8 ** keylist, INT32 len, 
+K_V * create_and_get_target_kv_node(INT8 ** keylist, INT32 len);
+K_V * find_target_kv_node(INT8 ** keylist, INT32 len);
+INT32 update_target_kv_node(INT8 ** keylist, INT32 len, 
                                        double data1, INT32 data2, INT8* data3,
                                        INT8 * val_str);
-INT32 add_target_kv_node(const INT8 ** keylist, INT32 len, 
+INT32 add_target_kv_node(INT8 ** keylist, INT32 len, 
                                        double data1, INT32 data2, INT8* data3,
                                        INT8 * val_str);
-INT32 get_target_kv_node(const INT8 ** keylist, INT32 len, 
+INT32 get_target_kv_node(INT8 ** keylist, INT32 len, 
                                        double *data1, INT32 *data2, INT8* data3,
                                        INT8 * val_str);
 INT32 sync_to_cfg_file(void);

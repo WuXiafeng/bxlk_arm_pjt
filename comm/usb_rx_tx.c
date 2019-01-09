@@ -6,6 +6,7 @@
 #include "work_thread.h"
 #include "usb_rx_tx.h"
 #include "pf.h"
+#include "core.h"
 
 #define BOOT_STATUS 0x0UL
 #define PWR_OK_BIT_MASK 0x00000001UL
@@ -40,13 +41,13 @@ INT32 usb_tx_rx_init(void)
     INT32 ret;
     UINT32 tmp;
     /* sema  init value is zero */
-    ret = PT_OPT.sema_init(&tx_rx_sema, 0);
+    tx_rx_sema = PT_OPT.sema_init(0);
 
-    if(ret < 0)
-        return ret;
+    if(tx_rx_sema < 0)
+        return ERROR;
 
     tmp = RFNC_BIT_MASK;
-    ret = bram_write(WORK_STATUS,&tmp,4);
+    ret = bram_write(WORK_STATUS,(UINT8*)&tmp,4);
 
     if(ret)
         return ret;
@@ -59,7 +60,7 @@ VOID set_power_on_flag(VOID)
     UINT32 tmp;
     tmp = PWR_OK_BIT_MASK;
 
-    bram_write(BOOT_STATUS,&tmp,4);
+    bram_write(BOOT_STATUS,(UINT8 *)&tmp,4);
     return;
 }
 
@@ -80,7 +81,7 @@ VOID start_usb_tx(QUE_BLK * blk, VOID * para)
         len = BRAM_MSG_MAX_LEN;
     }
     
-    ret = bram_write(BRAM_TX_DATA_OFFSET,blk->buf,len);
+    ret = bram_write(BRAM_TX_DATA_OFFSET,(UINT8 *)blk->buf,len);
 
     if(ret)
         return;
@@ -90,7 +91,7 @@ VOID start_usb_tx(QUE_BLK * blk, VOID * para)
         return;
 
     /*set DRFC */
-    bram_read(BRAM_RX_FLAG_OFFSET,&tmp,4);
+    bram_read(BRAM_RX_FLAG_OFFSET,(UINT8 *)&tmp,4);
     tmp |= DRFC_BIT_MASK;
     ret = bram_write(BRAM_TX_FLAG_OFFSET, (UINT8*)&tmp, 4);
     if(ret)
@@ -134,12 +135,12 @@ VOID usb_rx_handle(VOID)
 clear_reg:
     /*clear CNT_CMD*/
     tmp = 0;
-    bram_write(BRAM_RX_LEN_OFFSET,&tmp,4);
+    bram_write(BRAM_RX_LEN_OFFSET,(UINT8 *)&tmp,4);
     
     /*reset RFNC */
-    bram_read(BRAM_RX_FLAG_OFFSET,&tmp,4);
+    bram_read(BRAM_RX_FLAG_OFFSET,(UINT8 *)&tmp,4);
     tmp |= RFNC_BIT_MASK;
-    bram_write(BRAM_RX_FLAG_OFFSET,&tmp,4);
+    bram_write(BRAM_RX_FLAG_OFFSET,(UINT8 *)&tmp,4);
 
     return;
 }

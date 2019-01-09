@@ -12,18 +12,20 @@ const INT8 * default_cfg_table[] =
     (INT8*)":AMPL:STAR <-127.0> <dBm>",
     (INT8*)":AMPL:STOP <-127.0> <dBm>",
     
-    (INT8*)":SWEep:RF:STATe 0",
-    (INT8*)":SWEep:AMPLitude:STATe 0",
-    (INT8*)":SWEep:STEP:POINts <10>",
-    (INT8*)":SWEep:STEP:DWELl <10> <ms>",
-    (INT8*)":SWEep:REPeat CONTinuous",
-    (INT8*)":SWEep:STRG IMMediate",
-    (INT8*)":SWEep:STRG:SLOPe EXTP",
-    (INT8*)":SWEep:DIRection UP",
-    (INT8*)":PULM:STATe 0",
-    (INT8*)":PULM:SOURce INT",
+    (INT8*)":SWEep:RF:STAT 0",
+    (INT8*)":SWEep:AMPL:STAT 0",
+    (INT8*)":SWEep:STEP:POIN <10>",
+    (INT8*)":SWEep:STEP:DWEL <10> <ms>",
+    (INT8*)":SWEep:REP CONT",
+    (INT8*)":SWEep:STRG IMM",
+    (INT8*)":SWEep:STRG:SLOP EXTP",
+    (INT8*)":SWEep:DIR UP",
+    (INT8*)":PULM:STAT 0",
+    (INT8*)":PULM:SOUR INT",
 
-    (INT8*)":PULM:PERiod <200> <us>",
-    (INT8*)":PULM:WIDTh <100> <us>",   
-}
+    (INT8*)":PULM:PER <200> <us>",
+    (INT8*)":PULM:WIDT <100> <us>",
+    /*terminator*/
+    NULL,
+};
 

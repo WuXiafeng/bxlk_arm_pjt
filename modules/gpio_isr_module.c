@@ -33,8 +33,10 @@
 #include <linux/timer.h>  
 #include <linux/sched.h>
 #include <linux/string.h>
-#include <linux/sched/signal.h>		/* For send_sig(), same_thread_group(), etc. */
 #include <linux/version.h>
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4,10,0)
+#include <linux/sched/signal.h>		/* For send_sig(), same_thread_group(), etc. */
+#endif
 
 #define NETLINK_ISR_INFO     30
 #define MSG_LEN            125

@@ -51,9 +51,7 @@ void sig_handler_tx(int signum)
 }
 
 int isr_init(void)
-{
-
-    int fd;  
+{  
 	INT32 ret;
     user_msg_info u_info;
     socklen_t len;
@@ -62,6 +60,8 @@ int isr_init(void)
     ISR_INFO * infoptr;
 
 #ifdef USE_MISC_DEVICE
+    int fd;
+
 	fd = open("/dev/mybeep",O_RDWR);  
     fcntl(fd, F_SETOWN, getpid());  
     fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | FASYNC);  
@@ -69,6 +69,8 @@ int isr_init(void)
 #endif
 
 #ifdef USE_CHAR_DEVICE
+    int fd;
+
 	unsigned char key_val;
 	int ret;
 	int Oflags;
