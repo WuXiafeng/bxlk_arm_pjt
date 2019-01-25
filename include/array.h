@@ -37,7 +37,7 @@ static inline VOID* walk_array(UINT8 * ptr,
         {
             if(fc((VOID*)(ptr + i*size), para))
             {
-                return (VOID*)(ptr + i*size + sizeof(UINT32));
+                return (VOID*)(ptr + i*size);
             }
         }
     }

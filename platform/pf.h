@@ -8,6 +8,16 @@
 
 #define THREAD_NO_JOIN 0x00000010ul
 #define ALL_IP_ADDR ((UINT32)0x00000000)
+#define TASK_PRIO_NONE 0xA0000001
+#define TASK_PRIO_HIGH 0xA0000002
+#define TASK_PRIO_MID 0xA0000003
+#define TASK_PRIO_LOW 0xA0000004
+
+#define DO_SELECT_OPER_RX  (0x00000010ul)
+#define DO_SELECT_OPER_TX  (0x00000020ul)
+#define DO_SELECT_OPER_ERR (0x00000040ul)
+
+#define MAX_FD (1024)
 
 typedef struct pf_opera{
     INT32 (*init)(VOID);
@@ -29,6 +39,9 @@ typedef struct pf_opera{
     unsigned long (*get_pthread_id)(VOID);
     INT32 (*join)(unsigned long id);
     VOID (*sleep)(INT32 time);
+    /* select */
+    INT32 (*do_select)(INT32* fd, UINT32 operation, \
+                        INT32 second,INT32 * ready_fd_list);
 
     /* semaphore */
     INT32 (*sema_init)(INT32 value);
@@ -55,11 +68,13 @@ typedef struct pf_opera{
     INT32 (*read)(INT32 fd, INT8* buf, INT32 size);
     INT32 (*write)(INT32 fd, INT8* buf, INT32 len);
     INT32 (*lseek)(INT32 fd, INT32 off, INT32 whence);
+    INT32 (*get_available_len)(INT32 fd);
 
     /* timing */
     INT32 (*get_timestamp)(UINT64 * stamp);
     INT32 (*get_cycle)(UINT64 * cycle);
     pttime (*get_plat_clock)(VOID);
+    INT32 (*get_core_num)(VOID);
 
     /* package handle */
     INT32 (*pkt_send)(UINT8 *buf, INT32 len, INT32 option, VOID* extra);
@@ -67,7 +82,9 @@ typedef struct pf_opera{
     INT32 (*pkt_recv)(UINT8 *buf, INT32 len, INT32 option, VOID* extra);
     INT32 (*pkt_recv_cb_register)(INT32 (*callback)(UINT8* msg, INT32 len), \
                                 INT32 option);
-    INT32 (*pkt_recv_isr_register)(VOID (*isr_func)(VOID*), \
+    INT32 (*pkt_recv_isr_registerpkt_recv_cb_register)(VOID *(*isr_func) \
+                                  (VOID* para, UINT8 * data, \
+                                   UINT32 ip, INT16 port), \
                                     VOID* arg, INT32 option);
 
     /* socket */
@@ -77,11 +94,20 @@ typedef struct pf_opera{
     INT32 (*sock_sendto)(UINT8 *buf, INT32 len, INT32 option, \
                             INT32 socket, UINT8 ip[4], INT32 port);
     INT32 (*sock_recvfrom)(UINT8 *buf, INT32 len, INT32 option, \
-                                    INT32 socket, UINT8 ip[4], INT32* port);
+                                    INT32 socket, UINT8 ip[4], INT16* port);
     INT32 (*sock_listen)(INT32 socket);
     INT32 (*sock_accept)(INT32 socket, INT32 option, UINT8 ip[4], INT32* port);
     INT32 (*sock_connect)(INT32 socket, INT32 option, UINT8 ip[4], INT32 port);
     INT32 (*sock_close)(INT32 socket);
+
+    /*signal*/
+    INT32 (*sig_block)(INT32 sig_num);
+
+    /* ISR operation*/
+    INT32 (*isr_lock)(VOID);
+    INT32 (*isr_unlock)(VOID);
+    INT32 (*pkt_recv_isr_register)(VOID * (*func)(VOID * para), VOID * para, \
+                                    INT32 option);
 }PF_OPERA;
 
 /* Platform object */

@@ -11,6 +11,7 @@
 #include "app_pulm.h"
 #include "app_sys.h"
 #include "app_rfo.h"
+#include "app_cfg.h"
 #include "config_file_manage.h"
 
 INT32 test_func(char * str, int len);
@@ -26,6 +27,7 @@ struct {
     msg_func  func;
 } head_func_map_table[] = {
     {"testhead1", (msg_func)test_func},
+    {":CFG:SYNC",cfg_handle},
     {":FREQ:CW", freq_handle},
     {":FREQ:RF:STAR", freq_handle},
     {":FREQ:RF:STOP", freq_handle},
@@ -123,6 +125,13 @@ INT32 cmd_handle(INT8 * cmd)
 
     memset(keylist_buf, 0, sizeof(keylist_buf));
     memset(valstr, 0, 128);
+    memset((char *)data3,0,sizeof(data3));
+    len = 0;
+    
+    ret = PT_OPT.mem_alloc(RESP_DEFAULT_LEN, (VOID **)&resp_buf, 0);
+    
+    if(resp_buf)
+        memset(resp_buf,0,RESP_DEFAULT_LEN);
 
     ret = commd_str_prase(cmd,keylist,&len,&data1,&data2, \
                     data3,&operation,valstr);
@@ -130,22 +139,20 @@ INT32 cmd_handle(INT8 * cmd)
     if(ret < 0)
     {
         printf("cmd_handle, prase msg failed!\n");
-        return -1;
+        strcat((char *)resp_buf,"ERROR,cmd_handle, prase msg failed!\n");
+        goto out;
     }
 
-    ret = PT_OPT.mem_alloc(RESP_DEFAULT_LEN, (VOID **)&resp_buf, 0);
-
-    if(resp_buf)
-        memset(resp_buf,0,RESP_DEFAULT_LEN);
-
     /* if resp_buf is NULL, the cmd_handle will ignore it*/
-    ret = get_cmd_func_and_run(keylist,len,data1,data2,data3,operation,valstr,resp_buf);
+    ret = get_cmd_func_and_run(keylist,len,data1,data2,\
+                                data3,operation,valstr,resp_buf);
 
     if(ret < 0)
     {
         printf("cmd_handle, handle msg failed!\n");
     }
 
+out:
     /* if there's any string to send back, send it out, if no string ,just free the memory */
     if(resp_buf)
     {
@@ -168,7 +175,7 @@ VOID rx_msg_handle(QUE_BLK * blk, VOID * para)
     INT8 * msg;
     int ret;
 
-    if((!blk) || (blk->buf))
+    if((!blk) || (!blk->buf))
     {
         printf("rx_msg_handle NULL buffer received!\n");
         return;

@@ -45,7 +45,9 @@ INT32 queue_push(INT32 idx, QUE_BLK * buf);
 QUE_BLK * queue_pop(INT32 idx);
 INT32 remove_queue(INT32 idx);
 
-#define QUEUE_IDX_VALID(x) (DATA_IN_RANGE((x),0,QUEUE_POOL_NUM))
+#define QUEUE_INIT_IDX      (0x66660000L)
+#define QUEUE_MAX_IDX       (0x7FFFFFFFL)
+#define QUEUE_IDX_VALID(x) (DATA_IN_RANGE((x),QUEUE_INIT_IDX,QUEUE_MAX_IDX))
 
 /* define YOUR queue type here */
 #define QUEUE_BUF_TYPE_WORK_THREAD  0x2200AABB

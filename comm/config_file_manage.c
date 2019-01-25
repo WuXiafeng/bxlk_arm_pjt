@@ -29,6 +29,8 @@ INT32 cfg_init_load_file(void)
     INT8 valstr[128];
     INT32 operation;
     INT32 i;
+
+    INT8 tmprespbuf[256];
     
     memset(&cfg_root_node, 0, sizeof(K_V));
     strcpy((char *)cfg_root_node.key, "root");
@@ -68,25 +70,44 @@ INT32 cfg_init_load_file(void)
         keylist[i] = keylist_buf[i];
     }
 
+    memset(buff, 0, 256);
+    memset(valstr, 0, 128);
+    memset(keylist_buf,0,sizeof(keylist_buf));
+    memset((char *)data3,0,sizeof(data3));
+    len = 0;
+
     while (fgets((char *)buff, 256, fp) != NULL)
     {
-        memset(buff, 0, 256);
-        memset(valstr, 0, 128);
-        memset(keylist_buf,0,sizeof(keylist_buf));
         ret = commd_str_prase(buff,keylist,&len,&data1,&data2, \
                         data3,&operation,valstr);
         if(ret < 0){
+            memset(buff, 0, 256);
+            memset(valstr, 0, 128);
+            memset(keylist_buf,0,sizeof(keylist_buf));
+            memset((char *)data3,0,sizeof(data3));
+            len = 0;            
             continue;
         }
 
         /* Check the paramter validation in this function*/
         /*May be the value is invalid, then we just return*/
-        ret = get_cmd_func_and_run(keylist,len,data1,data2,data3,operation,valstr,NULL);
+        ret = get_cmd_func_and_run(keylist,len,data1,data2,data3,operation,\
+                                   valstr,(INT8*)tmprespbuf);
         if(ret < 0)
         {
+            memset(buff, 0, 256);
+            memset(valstr, 0, 128);
+            memset(keylist_buf,0,sizeof(keylist_buf));
+            memset((char *)data3,0,sizeof(data3));
+            len = 0;            
             printf("Warning, cfg_init_load_file handle init cmd failed!\n");
             continue;
-        }       
+        }
+        memset(buff, 0, 256);
+        memset(valstr, 0, 128);
+        memset(keylist_buf,0,sizeof(keylist_buf));
+        memset((char *)data3,0,sizeof(data3));
+        len = 0;        
     }
 
     fclose(fp);
@@ -404,9 +425,10 @@ void assemble_cfg_and_write(INT8 ** keylist, INT32 len,
     memset((char *)tmpstr,0,128);
     //snprintf(tmpstr,128,":");
 
-    combine_keylist(tmpstr, keylist, len);
+    combine_keylist(tmpstr, &keylist[1], len);
     
     strcat((char *)tmpstr, (char *)valstr);
+    strcat((char *)tmpstr,"\n");
     fputs ((char *)tmpstr, fp);
 
     return;
@@ -425,7 +447,7 @@ INT32 sync_to_cfg_file(void)
     
     fp = fopen(CFG_FILE_PATH, "a+");
 
-    if(fp != 0)
+    if(!fp)
     {
         printf("create config file failed!\n");
         PT_OPT.mute_unlock(cfg_mute_lock);
@@ -442,7 +464,7 @@ INT32 sync_to_cfg_file(void)
 VOID check_and_set_the_default_value(VOID)
 {
     INT32 i;
-    INT8* cmd;
+    INT8 cmd[128];
     INT32 ret;
     K_V * kv;
 
@@ -462,13 +484,18 @@ VOID check_and_set_the_default_value(VOID)
 
     for(i=0;(default_cfg_table[i] != NULL);i++)
     {
-        cmd = (INT8*)default_cfg_table[i];
+        memset(cmd,0,128);
+        strcpy((char *)cmd,(char *)default_cfg_table[i]);
+
         memset((char *)keylist_buf, 0, sizeof(keylist_buf));
         memset((char *)valstr, 0, 128);
+        memset((char *)data3,0,sizeof(data3));
+        len = 0;
 
         ret = commd_str_prase(cmd,keylist,&len,&data1,&data2, \
                         data3,&operation,valstr);
-        if(ret < 0){
+        if(ret < 0)
+        {
             continue;
         }
 

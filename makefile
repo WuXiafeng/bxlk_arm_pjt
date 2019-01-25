@@ -35,10 +35,14 @@ DEFINE =
 ifeq ($(TARGET_OS),linux)
 DEFINE += -DOS_LINUX
 endif
+
+ifeq ($(ARCH),x86)
+DEFINE += -DARCH_X86
+endif
 export DEFINE
 
 #cc flags 
-CC_FLAG = -W -Wall -Wno-main -Wundef -Wstrict-prototypes -Wno-trigraphs \
+CC_FLAG = -g -W -Wall -Wno-main -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
@@ -72,7 +76,7 @@ all: build_prog
 	@echo Build target program successful!
 
 build_prog: cc
-	$(CC) -o $(RELE_TAR) $(LD_FLAG) $(LIBS) $(ALL_OBJ)
+	$(CC) -g -o $(RELE_TAR) $(LD_FLAG) $(LIBS) $(ALL_OBJ)
 	 
 cc: $(SRC_DIR) $(CUR_OBJ)
 

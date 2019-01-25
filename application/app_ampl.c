@@ -7,23 +7,23 @@
 
 INT32 ampl_str_val_map(INT8 * str)
 {
-    if(!strcmp(str, "dBm"))
+    if(!strcmp((char *)str, "dBm"))
     {
         return UNIT_DBM;
     }
-    else if(!strcmp(str, "dBmV"))
+    else if(!strcmp((char *)str, "dBmV"))
     {
         return UNIT_DBMV;
     }
-    else if(!strcmp(str, "dBV"))
+    else if(!strcmp((char *)str, "dBV"))
     {
         return UNIT_DBV;
     }
-    else if(!strcmp(str, "mV"))
+    else if(!strcmp((char *)str, "mV"))
     {
         return UINT_MW;
     }
-    else if(!strcmp(str, "uV"))
+    else if(!strcmp((char *)str, "uV"))
     {
         return UNIT_UV;
     }
@@ -37,35 +37,62 @@ INT32 ampl_data_check(INT8 **keylist, INT32 len, double data1,INT8 * data3)
     list_ptr = (VAL_LIST *)data3;
     INT32 tmp_data2;
 
-    if((len > 3) || (strcmp("FREQ",keylist[0])))
+    if((len != 2)||(strcmp("AMPL",(char *)keylist[0])))
         return -1;
 
-    if((strcmp("CW",keylist[1])) && (strcmp("RF",keylist[1])))
+    if((strcmp("CW",(char *)keylist[1])) && \
+        (strcmp("STAR",(char *)keylist[1])) && \
+        (strcmp("STOP",(char *)keylist[1])))
         return -1;
 
-    if((len == 3) && (strcmp("STOP",keylist[2]))&& (strcmp("SCAL",keylist[2])) \
-        && (strcmp("STAR",keylist[2])))
-        return -1;
-
-    tmp_data2 = freq_str_val_map(list_ptr->value_list[1]);
+    tmp_data2 = ampl_str_val_map((INT8 *)list_ptr->value_list[1]);
 
     if(tmp_data2 < 0)
     {
         return -1;
     }
 
-    if((data1*tmp_data2 > MAX_FREQ)||(data1*tmp_data2 < MIN_FREQ))
-        return -1;
-        
+    if(tmp_data2 == UNIT_DBM)
+    {
+        if((data1 > MAX_DBM)||(data1 < MIN_DBM))
+            return -1;
+    }
+    else if(tmp_data2 == UNIT_DBMV)
+    {
+        if((data1 > MAX_DBMV)||(data1 < MIN_DBMV))
+            return -1;
+    }
+    else if(tmp_data2 == UNIT_DBV)
+    {
+        if((data1 > MAX_DBV)||(data1 < MIN_DBV))
+            return -1;
+    }
+    else if((tmp_data2 == UINT_MW) || (tmp_data2 == UNIT_UV))
+    {
+        if((data1*tmp_data2 > MAX_DBV)||(data1*tmp_data2 < MIN_DBV))
+            return -1;
+    }
+
+    return OK;
+}
+
+INT32 ampl_set_logic_reg(INT8 **keylist,INT32 len)
+{
+    (void)keylist;
+    (void)len;
+    //TODO: 
+    return OK;
 }
 
 INT32 ampl_handle(INT8 **keylist,INT32 len,double data1,INT32 data2,
-                      INT8 * data3,
+                      INT8* data3,
                       INT32 operation,
-                      INT8 valstr,
-                      INT8 *resp_buf)
+                      INT8* valstr,
+                      INT8 *resp_buf)                 
 {
-    INT ret;
+    INT32 ret;
+    INT32 tmp_data2;
+    VAL_LIST * list_ptr = (VAL_LIST *)data3;;    
     
     switch (operation) 
     {
@@ -73,49 +100,46 @@ INT32 ampl_handle(INT8 **keylist,INT32 len,double data1,INT32 data2,
             ret = get_value(keylist,len,resp_buf);
             if(ret <0)
             {
-                printf("freq_handle get value failed!\n");
-                strcat(resp_buf, "ERROR,freq_handle get value failed!\n");
+                printf("ampl_handle get value failed!\n");
+                strcat((char *)resp_buf, "ERROR,ampl_handle get value failed!\n");
                 return -1;
             }
             return 0;
         case OPT_SET_VALUE:
-            INT32 tmp_data2;
-            VAL_LIST * list_ptr;
-            
-            ret = freq_data_check(keylist, len,data1, data3);
+            ret = ampl_data_check(keylist, len,data1, data3);
 
             if(ret < 0)
             {
-                printf("ERROR,freq_handle, parameter validation faild ");
-                strcat(resp_buf, "ERROR,freq_handle, parameter validation faild ");
+                printf("ERROR,ampl_handle, parameter validation faild ");
+                strcat((char *)resp_buf, "ERROR,ampl_handle, parameter validation faild ");
                 return -1;
             }
 
             if(data2 == STR_VALUE)
             {
-                tmp_data2 = freq_str_val_map(list_ptr->value_list[1]);
+                tmp_data2 = ampl_str_val_map((INT8 *)list_ptr->value_list[1]);
             }
 
             ret = add_target_kv_node(keylist,len,data1,tmp_data2,data3,valstr);
             if(ret < 0)
             {
-                printf("ERROR,freq_handle, add CONFIG faild ");
-                strcat(resp_buf, "ERROR,freq_handle, add CONFIG faild ");
+                printf("ERROR,ampl_handle, add CONFIG faild ");
+                strcat((char *)resp_buf, "ERROR,ampl_handle, add CONFIG faild ");
                 return -1;
             }      
 
-            ret = freq_set_logic_reg(keylist, len);
+            ret = ampl_set_logic_reg(keylist, len);
             if(ret < 0)
             {
-                printf("ERROR,freq_handle, reg config faild ");
-                strcat(resp_buf, "ERROR,freq_handle, reg config faild ");
+                printf("ERROR,ampl_handle, reg config faild ");
+                strcat((char *)resp_buf, "ERROR,ampl_handle, reg config faild ");
                 return -1;
             }                         
             return 0;
         case OPT_CHECK_KEY_LIST:
         default:
-            printf("freq_handle Operation no support! %d \n", operation);
-            strcat(resp_buf, "ERROR,freq_handle, Operation no support!");
+            printf("ampl_handle Operation no support! %d \n", operation);
+            strcat((char *)resp_buf, "ERROR,ampl_handle, Operation no support!");
             return ERROR;
     }
 }

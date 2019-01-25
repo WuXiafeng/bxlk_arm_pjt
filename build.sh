@@ -6,12 +6,14 @@
 source /opt/Xilinx/SDK/2015.4/settings64.sh
 if [ $1 == work ]; then
 	CROSS=
+	ARCH=x86
 else
+	ARCH=arm
 	CROSS=arm-xilinx-linux-gnueabi-
 fi
 	
 GNU=g
-ARCH=arm
+
 export TARGET_OS=linux
 export CROSS
 export GNU

@@ -7,7 +7,7 @@ const INT8 * default_cfg_table[] =
     (INT8*)":FREQ:CW <1> <GHz>",
     (INT8*)":FREQ:RF:STAR <100> <MHz>",
     (INT8*)":FREQ:RF:STOP <100> <MHz>",
-    (INT8*)":FREQ:RF:SCAL LOG", /* miss default , set LOG tmplately*/
+    (INT8*)":FREQ:RF:SCAL LOG",
     (INT8*)":AMPL:CW <-127.0> <dBm>",
     (INT8*)":AMPL:STAR <-127.0> <dBm>",
     (INT8*)":AMPL:STOP <-127.0> <dBm>",

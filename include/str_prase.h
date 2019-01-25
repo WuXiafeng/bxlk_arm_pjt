@@ -14,7 +14,7 @@
 
 typedef enum cmd_opra{
     OPT_GET_VALUE = 0x3923,
-    OPT_CHECK_KEY_LIST,
+    OPT_CHECK_KEY_LIST, /* command operation */
     OPT_SET_VALUE
 }CMD_OPRA;
 
@@ -41,5 +41,7 @@ INT32 commd_str_prase(INT8 *buf,
                               INT8 *valstr);
 
 void combine_keylist(INT8 *dst, INT8 ** keylist, INT32 len);
+INT32 convet_str_2_value(INT8 * str, double * db);
+
 #endif /* __STR_PRASE_H__ */
 

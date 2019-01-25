@@ -69,7 +69,13 @@ INT32 freq_data_check(INT8 **keylist, INT32 len, double data1,INT8 * data3)
     return OK;
 }
 
-extern INT32 freq_set_logic_reg(INT8** keylist, INT32 len);
+INT32 freq_set_logic_reg(INT8 **keylist,INT32 len)
+{
+    (void)keylist;
+    (void)len;    
+    //TODO: 
+    return OK;
+}
 
 INT32 freq_handle(INT8 **keylist,INT32 len,double data1,INT32 data2,
                       INT8 * data3,
@@ -79,7 +85,7 @@ INT32 freq_handle(INT8 **keylist,INT32 len,double data1,INT32 data2,
 {
     INT32 ret;
     INT32 tmp_data2;
-    VAL_LIST * list_ptr = (VAL_LIST *)data3;;
+    VAL_LIST * list_ptr = (VAL_LIST *)data3;
     
     switch (operation) 
     {

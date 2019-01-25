@@ -15,9 +15,11 @@ extern INT32 comm_isr_init(VOID);
 VOID set_system_on(void){
 	if(system_state_flag != SYSTEM_ON)
 		system_state_flag = SYSTEM_ON;
-
+    
+#ifndef ARCH_X86
     /*set power on flag */
     set_power_on_flag();
+#endif
 	return;
 }
 

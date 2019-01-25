@@ -24,6 +24,17 @@ INT8 * get_upper(INT8 * str)
     return strtrim(str, isupper);
 }
 
+INT32 is_float_num(INT32 c)
+{
+    if(isalnum(c))
+        return true;
+
+    if((c == '-') || (c == '.'))
+        return true;
+
+    return false;
+}
+
 /* Convert only digital string */
 INT32 convet_str_2_value(INT8 * str, double * db)
 {
@@ -37,7 +48,8 @@ INT32 convet_str_2_value(INT8 * str, double * db)
         return DIGI_VALUE;
     }
     /* If it's string, just indicate that  */
-    *db = 0;
+    if(db)
+        *db = 0;
     return STR_VALUE;
 }
 
@@ -59,7 +71,7 @@ INT32 value_str_prase(INT8 *valstr,double *data1,
     ret_str = (INT8*)strtok_r((char *)tmptr, " <>", (char **)&tmp_save);
     if(ret_str)
     {
-        list_ptr->value_list[i] = (char *)strtrim(ret_str,isalnum);
+        list_ptr->value_list[i] = (char *)strtrim(ret_str,is_float_num);
     }
     else{
         printf("value_str_prase no valid value, str is %s\n",valstr);
@@ -75,7 +87,7 @@ INT32 value_str_prase(INT8 *valstr,double *data1,
         if(ret_str)
         {
             /* Only get the UPER, LOWER, DIGITAL chars */
-            list_ptr->value_list[i] = (char *)strtrim(ret_str,isalnum);
+            list_ptr->value_list[i] = (char *)strtrim(ret_str,is_float_num);
             i++;
         }
         
@@ -110,6 +122,7 @@ INT32 commd_str_prase(INT8 *buf,
     if((*buf != ':') || (strlen((char *)buf) < 4))
     {
         printf("syntax error, your CMD str is:\n \t%s \n",buf);
+        return -1;
     }
 
     char * tmp_save;
@@ -117,19 +130,22 @@ INT32 commd_str_prase(INT8 *buf,
     INT32 i;
 
     ret_str = strtok_r((char *)buf,":",&tmp_save);
+
     strcpy((char *)keylist[*len],(char *)ret_str);
+
     (*len)++;
 
     while(ret_str)
     {
         ret_str = strtok_r(NULL,":",&tmp_save);
+        
         if(ret_str)
         {
             strcpy((char *)keylist[*len],(char *)ret_str);
             (*len)++;
         }
     }
-
+    
     char *tmptr;
 
     tmptr = strrchr((char *)keylist[*len - 1], '?');
@@ -138,14 +154,21 @@ INT32 commd_str_prase(INT8 *buf,
     {
         *operation = OPT_GET_VALUE;
         *tmptr='\0';
+        /* get upper  */
+        for(i=0;i<*len;i++)
+        {
+            strtrim(keylist[i], isupper);
+        }          
         return 0;
     }
 
-    tmptr = strrchr((char *)keylist[*len - 1], ' ');
-
+    tmptr = strchr((char *)keylist[*len - 1], ' ');
+    //printf("%s\n",keylist[*len - 1]);
+    //printf("%s\n",tmptr);
+    
     if(!tmptr)
     {
-        tmptr = strrchr((char *)keylist[*len - 1], '<');
+        tmptr = strchr((char *)keylist[*len - 1], '<');
 
         if(!tmptr)
         {
@@ -157,11 +180,11 @@ INT32 commd_str_prase(INT8 *buf,
     strcpy((char *)valstr,(char *)tmptr);
     /* Cut the string  keylist[*len - 1] here*/
     *tmptr='\0';
-
+    
     /* get upper  */
     for(i=0;i<*len;i++){
         strtrim(keylist[i], isupper);
-    }
+    } 
 
     return value_str_prase(valstr,data1,data2,data3,operation);
 }

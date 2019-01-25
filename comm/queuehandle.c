@@ -4,7 +4,7 @@
 #include "queuehandle.h"
 
 QUE_MAP que_map_arr[QUEUE_POOL_NUM];
-static INT32 queue_idx = 0x66660000L;
+static INT32 queue_idx = QUEUE_INIT_IDX;
 INT32 seat_lock;
 
 INT32 seat_init(void)

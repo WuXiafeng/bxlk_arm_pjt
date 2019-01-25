@@ -30,12 +30,11 @@ static VOID* work_func_caller(VOID * para)
     for(;;)
     {
         PT_OPT.sema_wait(ptr->sema);
-        memset(blk,0,sizeof(QUE_BLK));
         blk =  queue_pop(ptr->queue_idx);
 
         if(NULL == blk)
         {
-            PT_OPT.sleep(10);
+            PT_OPT.sleep(1000);
             continue;
         }
 
@@ -139,9 +138,9 @@ static bool check_work_idx(VOID* ptr, VOID* para)
         return false;
     
     INT32 idx = (*(INT32 *)para);
-    WORK_OBJ * obj = ptr;
+    WORK_OBJ_ARRAY * obj = (WORK_OBJ_ARRAY *)ptr;
 
-    if(obj->idx == idx)
+    if(obj->obj.idx == idx)
     {
         return true;
     }
@@ -149,9 +148,9 @@ static bool check_work_idx(VOID* ptr, VOID* para)
     return false;
 }
 
-static WORK_OBJ * get_work_obj_by_idx(INT32 idx)
+static WORK_OBJ_ARRAY * get_work_obj_by_idx(INT32 idx)
 {
-    return (WORK_OBJ *)walk_array((UINT8 *)work_array, MAX_WORK_OBJ_NUM, \
+    return (WORK_OBJ_ARRAY *)walk_array((UINT8 *)work_array, MAX_WORK_OBJ_NUM, \
                                 sizeof(WORK_OBJ_ARRAY), check_work_idx,&idx);
 }
 
@@ -159,7 +158,7 @@ INT32 add_work_to_thread(INT32 idx, VOID * work, INT32 size)
 {
     INT32   ret;
     QUE_BLK * blk;
-    WORK_OBJ * obj = get_work_obj_by_idx(idx);
+    WORK_OBJ_ARRAY * obj = get_work_obj_by_idx(idx);
     if(!obj)
     {
         return ERROR;
@@ -174,7 +173,7 @@ INT32 add_work_to_thread(INT32 idx, VOID * work, INT32 size)
     blk->buf_size = size;
     blk->buf_type = QUEUE_BUF_TYPE_WORK_THREAD;
 
-    ret = queue_push(obj->info.queue_idx, blk);
+    ret = queue_push(obj->obj.info.queue_idx, blk);
 
     if(ret < 0)
     {
@@ -183,7 +182,7 @@ INT32 add_work_to_thread(INT32 idx, VOID * work, INT32 size)
     }
 
     /* wake up work thread */
-    PT_OPT.sema_post(obj->info.sema);
+    PT_OPT.sema_post(obj->obj.info.sema);
     
     return 0;
 }

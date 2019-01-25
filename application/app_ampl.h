@@ -10,9 +10,9 @@ INT32 ampl_handle(INT8 **keylist,INT32 len,double data1,INT32 data2,
                       INT8* valstr,
                       INT8 *resp_buf);
 
-#define UNIT_DBV (1000)
-#define UNIT_DBMV (1)
-#define UNIT_DBM (1)
+#define UNIT_DBV (7788)
+#define UNIT_DBMV (5566)
+#define UNIT_DBM (3344)
 #define UINT_MW (1000)
 #define UNIT_UV (1)
 

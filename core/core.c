@@ -41,7 +41,7 @@ int core_init(void)
     {
         return ret;
     }
-
+    
     tx_work_thread_id = create_work_thread(ret, 
                                             start_usb_tx,
                                             NULL,
@@ -154,22 +154,44 @@ INT32 data_send_timeout(INT32 sockfd,INT8 *data,
     tv.tv_sec = sec;
     tv.tv_usec = 0;
     INT32 ret;
+    INT32 err;
 
-    while(total<length){
-
+    while(total<length)
+    {
         ret = select(sockfd + 1, NULL, &rdfds, NULL, &tv);
         if(ret < 0) 
         {
             return -1;
-        }else if(ret==0)
+        }
+        /* time out */
+        else if(ret==0)
         {
-            return -1;
-        }else{
-            if(FD_ISSET(sockfd, &rdfds)){
-                if((sendbytes=send(sockfd,data+total,length-total,0))==-1){
-		                printf("data send timeout\n");
-                    return -1;
+            return 0;
+        }else
+        {
+            if(FD_ISSET(sockfd, &rdfds))
+            {
+                sendbytes=send(sockfd,data+total,length-total,0);
+                
+                if(sendbytes < 0)
+                {
+                    err = errno;
+                    /* sig */
+                    if(err == EINTR)
+                    {
+                        continue;
+                    }
+                    
+		            printf("data send timeout\n");
+                    return -1;                    
                 }
+                /* for server, connection failed */
+                else if(sendbytes == 0)
+                {
+                    /* stop send, return bytes has send out */
+                    break;
+                }
+                
                 total+=sendbytes;                
             }
         }
@@ -179,12 +201,13 @@ INT32 data_send_timeout(INT32 sockfd,INT8 *data,
 
 int32_t data_recv_length_timeout(int32_t sockfd,int8_t *data, int32_t sec)
 {
-    int32_t recvbytes;
+    int32_t recvbytes = 0;
     int32_t ret;    
     fd_set rdfds;
     struct timeval tv;
     FD_ZERO(&rdfds);
     FD_SET(sockfd, &rdfds);
+    INT32 err;
 
     if (sec ==0)
     {
@@ -196,40 +219,53 @@ int32_t data_recv_length_timeout(int32_t sockfd,int8_t *data, int32_t sec)
     }
     tv.tv_usec = 0;
 
+    ret = select(sockfd + 1, &rdfds, NULL, NULL, &tv);
+    if(ret < 0) 
     {
-        ret = select(sockfd + 1, &rdfds, NULL, NULL, &tv);
-        if(ret < 0) 
+        printf("IN data_recv_length_timeout select error :  <<< %s\n", strerror(errno));
+        return -1;
+    /* timeout */
+    }
+    else if(ret==0)
+    {
+        /*printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          "IN data_recv_length_timeout select NO DATA!\n");*/
+        return 0;
+    }
+    else
+    {
+        if(FD_ISSET(sockfd, &rdfds))
         {
-            printf("IN data_recv_length_timeout select error :  <<< %s\n", strerror(errno));
-            return -1;
-        }else if(ret==0)
-        {
-            //printf("IN data_recv_length_timeout select NO DATA\n");
-            return 0;
-        }else{
-            if(FD_ISSET(sockfd, &rdfds))
+            while(1)
             {
-                //while(1)
-                {
-                    recvbytes=recv(sockfd,data,1024,0);
-                    
-                    //printf("recv msgf:%s, recvbytes:%d\n", data, recvbytes);
-                    
-                    if(recvbytes < 0)
-                    {
-                        printf("IN data_recv_length_timeout recv error :  <<< %s\n", strerror(errno));
-                        return -1;                    
-                    }
-                    else if(recvbytes==0)
-                    {
-                        //printf("IN data_recv_length_timeout recv finish  ! \n");
-                        return 0;
-                    }
+                recvbytes=recv(sockfd,data,1024,0);
                 
+                //printf("recv msgf:%s, recvbytes:%d\n", data, recvbytes);
+                
+                if(recvbytes < 0)
+                {
+                    err = errno;
+                    if((err == EINTR))
+                    {
+                        continue;
+                    }
+                    
+                    printf("IN data_recv_length_timeout recv error :  <<< %s\n", strerror(errno));
+                    return -err;                    
                 }
+                /* for server, means connection failed */
+                else if(recvbytes==0)
+                {
+                    /*printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+                      "IN data_recv_length_timeout recv finish!\n");*/
+                    return -1;
+                }
+                
+                return recvbytes;
             }
         }
     }
+    
     return recvbytes;
 }
 
@@ -268,7 +304,12 @@ void start_socket_session_control(void)
     memset(&sock_addr,0,sizeof(struct sockaddr_in));
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_port = htons(SOCKET_PORT);
+
+#ifndef ARCH_X86
     sock_addr.sin_addr.s_addr = inet_addr(SOCKET_SER_IP_ADDR);
+#else
+    sock_addr.sin_addr.s_addr = INADDR_ANY;
+#endif
 
     ret = bind(core_socket_fd,(struct sockaddr*)&sock_addr,  \
                         sizeof(struct sockaddr_in));
@@ -299,6 +340,7 @@ WATI_SESSION:
         memset(&client_addr,0,sizeof(struct sockaddr_in));
         len = sizeof(client_addr);
         session_fd=accept(core_socket_fd,(struct sockaddr*)&client_addr,&len);
+        printf("connect request recived!\n");
 
         if(session_fd<0)
         {  
@@ -349,6 +391,7 @@ WATI_SESSION:
         INT32 len;
         INT8 * buf;
 
+        printf("session started!\n");
         for(;;)
         {
             memset(recv_buf,0,sizeof(recv_buf));
@@ -369,12 +412,18 @@ WATI_SESSION:
                     exit_session();
                     break;
                 }
-                add_work_to_thread(rx_work_thread_id, (VOID*)buf, len);
+                strcpy((char *)buf,(char *)recv_buf);
+                ret = add_work_to_thread(rx_work_thread_id, (VOID*)buf, len);
+                if(ret)
+                {
+                    printf("WARNING, start_socket_session_control"
+                        " add_work_to_thread failed!\n");
+                    continue;
+                }
             }
             else if(ret < 0)
             {
-                    fprintf(stderr, "receive msg failed!"
-                                            " errno is %d\n",errno);
+                    fprintf(stderr, "Session terminated!\n");
                     exit_session();
                     break;                
             }
@@ -409,6 +458,7 @@ VOID core_msg_send(INT8 *buf, INT32 len)
         return;
     }
 
+#ifndef ARCH_X86
     /* filter */
     if(core_sock_msg_filter){
         if(core_sock_msg_filter(buf,len))
@@ -417,6 +467,7 @@ VOID core_msg_send(INT8 *buf, INT32 len)
             return;
         }
     }
+#endif
     
     PT_OPT.mute_lock(session_fd_lock);
     ret = (session_fd >= 0);

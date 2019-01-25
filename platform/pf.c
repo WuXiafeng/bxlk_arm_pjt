@@ -624,7 +624,7 @@ INT32 linux_socket_sendto(UINT8 *buf, INT32 len, INT32 option,
 }
 
 INT32 linux_socket_recvfrom(UINT8 *buf, INT32 len, INT32 option,
-                                    INT32 socket, UINT8 ip[4], INT32* port)
+                                    INT32 socket, UINT8 ip[4], INT16* port)
 {
     INT32 ret;
     socklen_t length;
@@ -798,9 +798,96 @@ INT32 linux_socket_close(INT32 socket)
 {
     return close(socket);
 }
- PF_OPERA opera = {
-	 .mem_alloc = linux_alloc,
-	 .mem_free = linux_free,
+
+INT32 linux_get_core_num(VOID)
+{
+#ifdef _SC_NPROCESSORS_ONLN
+	return (sysconf(_SC_NPROCESSORS_ONLN));
+#else
+	return (1);
+#endif    
+}
+
+INT32 linux_sig_block(INT32 sig_num)
+{
+	sigset_t set;
+
+	sigemptyset(&set);
+	sigaddset(&set, sig_num);
+	(void) pthread_sigmask(SIG_BLOCK, &set, NULL);
+    return OK;
+}
+
+INT32 linux_do_select(INT32* fd, UINT32 operation, 
+                           INT32 second,INT32 * ready_fd_list)
+{
+    fd_set tmpfds,rxfds,txfds,errfds;
+    struct timeval tv;
+    INT32 ret, i;
+    INT32 fdd = MAX_FD;
+
+    FD_ZERO(&tmpfds);
+    for(i=0; fd[i] != -1;i++)
+    {
+        FD_SET(fd[i], &tmpfds);
+        if(fdd > fd[i])
+            fdd = fd[i];
+    }
+    
+    tv.tv_sec = second;
+    tv.tv_usec = 0;
+
+    if(operation & DO_SELECT_OPER_RX)
+        memcpy(&rxfds,&tmpfds,sizeof(fd_set));
+
+    if(operation & DO_SELECT_OPER_TX)
+        memcpy(&txfds,&tmpfds,sizeof(fd_set));
+
+    if(operation & DO_SELECT_OPER_ERR)
+        memcpy(&errfds,&tmpfds,sizeof(fd_set));
+    
+    ret = select(fdd + 1, &rxfds,&txfds,&errfds,&tv);
+
+    if(ret < 0)
+    {
+        return ERROR;
+    }
+    else if(ret == 0)
+    {
+        return PLATFORM_LAYER_SELECT_TIME_OUT;
+    }
+    else
+    {
+        /* update rx ready_fd_list */
+        if((ready_fd_list)&&(operation & DO_SELECT_OPER_RX))
+        {
+            for(;i>0;i--)
+            {
+                FD_ISSET(fd[i-1],&rxfds);
+                *ready_fd_list++ = fd[i-1];
+            }
+        }
+        
+        return ret;
+    }
+}
+
+INT32 linux_get_ava_len(INT32 fd)
+{
+    INT32 ava_len;
+    INT32 ret;
+
+    ret = ioctl(fd,FIONREAD,&ava_len);
+
+    if(ret < 0)
+        return 0;
+
+    return ava_len;
+}
+
+PF_OPERA opera = {
+    .mem_alloc = linux_alloc,
+    .mem_free = linux_free,
 	 .get_pid = linux_get_pid,
 	 .get_pthread_id = linux_get_pthread, 
 	 .cv_wait = linux_pthread_cond_wait,
@@ -829,8 +916,12 @@ INT32 linux_socket_close(INT32 socket)
     .sock_accept = linux_socket_accept,
     .sock_connect = linux_socket_connect,
     .sock_close = linux_socket_close,
- };
- 
+    .get_core_num = linux_get_core_num,
+    .sig_block = linux_sig_block,
+    .do_select = linux_do_select,
+    .get_available_len = linux_get_ava_len,
+};
+
 PLTF_OBJ linux_pt = {
 	 (INT8*)"linux platform",
 	 &opera,

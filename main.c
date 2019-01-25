@@ -23,6 +23,7 @@ VOID main(const INT32 argc, const INT8 ** argv)
 
     atexit(exit_bxlk);
 
+#ifndef ARCH_X86
     ret = pt_hw_init();
 
     if(ret != OK)
@@ -30,7 +31,8 @@ VOID main(const INT32 argc, const INT8 ** argv)
         printf("pt_hw_init failed!\n");
         exit(1);
     }
-	
+#endif
+
     ret = pltf_init();
     if(ret != OK)
     {
@@ -48,7 +50,7 @@ VOID main(const INT32 argc, const INT8 ** argv)
     ret = core_init();
     if(ret != OK)
     {
-        printf("core_init failed!\n");
+        printf("core_init failed! ret is %d\n",ret);
         exit(1);
     } 
 

@@ -38,20 +38,22 @@ extern INT32 rx_work_thread_id;
 
 INT32 usb_tx_rx_init(void)
 {
-    INT32 ret;
-    UINT32 tmp;
     /* sema  init value is zero */
     tx_rx_sema = PT_OPT.sema_init(0);
 
     if(tx_rx_sema < 0)
         return ERROR;
-
+#ifndef ARCH_X86 
+    UINT32 tmp;
+    INT32 ret;
     tmp = RFNC_BIT_MASK;
+   
     ret = bram_write(WORK_STATUS,(UINT8*)&tmp,4);
 
     if(ret)
         return ret;
-    
+#endif
+
     return 0;
 }
 
@@ -130,7 +132,13 @@ VOID usb_rx_handle(VOID)
     if(ret)
         goto clear_reg;
 
-    add_work_to_thread(rx_work_thread_id, (VOID*)buf, len);
+    ret = add_work_to_thread(rx_work_thread_id, (VOID*)buf, len);
+
+    if(ret)
+    {
+        printf("usb_rx_handle: add buf to rx_work_thread_id failed!\n");        
+        goto clear_reg;        
+    }
 
 clear_reg:
     /*clear CNT_CMD*/
@@ -152,6 +160,11 @@ VOID usb_tx_done(VOID)
 
 VOID usb_tx_send(INT8 * buf, INT32 len)
 {
-    add_work_to_thread(tx_work_thread_id, (VOID*)buf, len);
+    INT32 ret;
+    ret = add_work_to_thread(tx_work_thread_id, (VOID*)buf, len);
+    if(ret)
+    {
+        printf("usb_tx_send: add buf to rx_work_thread_id failed!\n");                
+    }    
 }
 

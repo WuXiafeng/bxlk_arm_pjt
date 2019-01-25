@@ -15,7 +15,7 @@ int memfd = -1;
 
 static inline int range_invalid(UINT32 offset, int len)
 {
-	if((offset < BASE_ADDRESS) || (offset + len > BASE_ADDRESS + MAP_SIZE))
+	if((offset + len > MAP_SIZE))
 		return 1;
 	return 0;
 }
@@ -31,9 +31,14 @@ int bram_read(UINT32 offset, UINT8 * buf, int len)
 	}
 
 	mapped_dev_base = mapped_base + (dev_base & MAP_MASK);
+    if((mapped_base == NULL)||(mapped_base == (VOID*)-1))
+    {
+        printf("bram not initialized!\n");
+        return -1;
+    }    
 
 	memcpy(buf, \
-        (unsigned char *)(mapped_dev_base + (offset - BASE_ADDRESS)), len);
+        (unsigned char *)(mapped_dev_base + offset), len);
 
     return 0;
 }
@@ -47,10 +52,15 @@ int bram_write(UINT32 offset, UINT8 * buf, int len)
 		printf("bram_write Invalid address!\n");
 		return -1;
 	}
+    if((mapped_base == NULL)||(mapped_base == (VOID*)-1))
+    {
+        printf("bram not initialized!\n");
+        return -1;
+    }
 
 	mapped_dev_base = mapped_base + (dev_base & MAP_MASK);
 
-	memcpy((unsigned char *)(mapped_dev_base + (offset - BASE_ADDRESS)), \
+	memcpy((unsigned char *)(mapped_dev_base + offset ), \
          buf,  len);
     return 0;
 }
