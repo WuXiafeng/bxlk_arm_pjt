@@ -45,19 +45,23 @@
 #define IRP_NUM_TX    63
 
 #ifndef IRQF_DISABLED
-#define IRQF_DISABLED 0x00000020//调用中断处理程序时禁用IRQ
+/*disable IRQ when processing another IRQ, can not reentry*/
+#define IRQF_DISABLED 0x00000020
 #endif
 
 #ifndef IRQF_TRIGGER_HIGH
-#define IRQF_TRIGGER_HIGH 0x00000004//高电平触发
+/* High level Voltage trigger */
+#define IRQF_TRIGGER_HIGH 0x00000004
 #endif
 
 #ifndef IRQF_TRIGGER_RISING
-#define IRQF_TRIGGER_RISING 0x00000001 //上升沿触发
+/* voltage Rising   trigger */
+#define IRQF_TRIGGER_RISING 0x00000001
 #endif
 
 #ifndef IRQF_SHARED
-#define IRQF_SHARED 0x00000080 //共享中断?
+/* Shared IRQ ? */
+#define IRQF_SHARED 0x00000080
 #endif
 
 #define DEVICE_NAME "bxlk-gpio-irq"
@@ -433,7 +437,7 @@ static unsigned chardev_drv_poll(struct file *file, poll_table *wait)
 #if 0
 	unsigned int mask = 0;
 	
-	poll_wait(file, &button_waitq, wait); // 不会立即休眠
+	poll_wait(file, &button_waitq, wait);
  
 	if (ev_press)
 		mask |= POLLIN | POLLRDNORM;

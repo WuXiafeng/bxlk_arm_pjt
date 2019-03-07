@@ -88,11 +88,11 @@ int isr_init(void)
 	//get the open method 
 	Oflags = fcntl(fd, F_GETFL); 
  
-	//将fd的打开方式设置为FASYNC --- 即 支持异步通知
-	//该行代码执行会触发 驱动程序中 
-	//file_operations->fasync 函数 
-	//------fasync函数调用fasync_helper初始化一个fasync_struct结构体，
-	//该结构体描述了将要发送信号的进程
+    /* Set the fd with FASYNC option (support async notice ), when this option */
+    /* was set,  file_operations->fasync function in driver will be called.*/ 
+    /* Add the  file_operations->fasync function will call fasync_helper fuction,*/
+    /* fasync_helper will init a fasync_struct struct which discripe the process 
+       that the signal will send to */
 	//PID (fasync_struct->fa_file->f_owner->pid)
 	fcntl(fd, F_SETFL, Oflags | FASYNC);
 #endif
